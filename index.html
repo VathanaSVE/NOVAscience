@@ -482,6 +482,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:.9rem 
       <button class="nav-tab active" id="tab-home" onclick="goTab('home')">🏠 Home</button>
       <button class="nav-tab" id="tab-explore" onclick="goTab('explore')">🔍 Explore</button>
       <button class="nav-tab" id="tab-multi" onclick="goTab('multi')">⚔️ Multiplayer</button>
+      <button class="nav-tab" id="tab-exam" onclick="goTab('exam')">📝 Exam</button>
       <button class="nav-tab" id="tab-profile" onclick="goTab('profile')">👤 Profile</button>
     </div>
     <div class="nav-right">
@@ -515,14 +516,14 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:.9rem 
         <div class="lessons-grid" id="explore-grid"></div>
       </div>
     </div>
-    <div class="panel" id="panel-multi">
+<div class="panel" id="panel-multi">
       <div class="multi-wrap">
         <div class="multi-hero"><h2>⚔️ Science Battles</h2><p>Challenge friends and classmates in live science quiz battles</p></div>
         <div class="multi-grid">
-          <div class="multi-card" onclick="quickMatch()"><div class="multi-card-icon">⚡</div><div class="multi-card-name">Quick Match</div><div class="multi-card-desc">Get matched instantly with a player at your grade level</div><div class="live-tag">LIVE</div></div>
-          <div class="multi-card" onclick="createRoom()"><div class="multi-card-icon">🏠</div><div class="multi-card-name">Create Room</div><div class="multi-card-desc">Create a private room and invite friends with a code</div></div>
-          <div class="multi-card" onclick="joinRoomP()"><div class="multi-card-icon">🔑</div><div class="multi-card-name">Join Room</div><div class="multi-card-desc">Enter a room code to join a friend's battle</div></div>
-          <div class="multi-card" onclick="toast('🏆 Tournaments coming next update!','txp')"><div class="multi-card-icon">🏆</div><div class="multi-card-name">Tournament</div><div class="multi-card-desc">Bracket-style weekly tournaments with huge XP prizes</div><div class="live-tag">SOON</div></div>
+          <div class="multi-card" onclick="startBotMatch()"><div class="multi-card-icon">🤖</div><div class="multi-card-name">VS Bot</div><div class="multi-card-desc">Battle an AI opponent tuned to your grade level. Instant start, no waiting.</div></div>
+          <div class="multi-card" onclick="createRoom()"><div class="multi-card-icon">👥</div><div class="multi-card-name">VS Human — Create Room</div><div class="multi-card-desc">Create a room and share the code with a friend. Real-time battle when they join.</div></div>
+          <div class="multi-card" onclick="joinRoomP()"><div class="multi-card-icon">🔑</div><div class="multi-card-name">VS Human — Join Room</div><div class="multi-card-desc">Enter a friend's room code and battle them live.</div></div>
+          <div class="multi-card" onclick="goTab('exam')"><div class="multi-card-icon">📝</div><div class="multi-card-name">Exam Mode</div><div class="multi-card-desc">10 questions, 15 minutes, one subject. Test yourself seriously.</div></div>
         </div>
         <div id="room-section" style="display:none">
           <div class="room-box">
@@ -542,6 +543,36 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:.9rem 
           </div>
         </div>
         <div class="sb-card" style="margin-top:1.2rem"><div class="sb-title" style="margin-bottom:.9rem">🌍 Global Leaderboard</div><ul class="lb-list" id="global-lb"></ul></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-exam">
+      <div style="max-width:800px;margin:0 auto;padding:2rem">
+        <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:.4rem">📝 Exam Mode</div>
+        <div style="color:var(--muted);font-size:14px;margin-bottom:2rem">10 questions · 15 minutes · Serious difficulty</div>
+        <div id="exam-lobby">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:600;margin-bottom:1rem">Choose a subject:</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:2rem" id="exam-subj-pick"></div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:1rem">Difficulty: <strong style="color:var(--accent3)">Hard</strong> — equations, anatomy, reactions, coding, deep science</div>
+          <button class="btn-primary" style="max-width:200px" onclick="startExam()">Start Exam →</button>
+        </div>
+        <div id="exam-active" style="display:none">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.2rem">
+            <div style="font-size:13px;color:var(--muted)">Q <span id="ex-qn">1</span>/10</div>
+            <div class="timer-bar" style="flex:1"><div class="timer-fill" id="ex-tfill" style="width:100%"></div></div>
+            <div class="timer-num" id="ex-tnum">15:00</div>
+          </div>
+          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:1rem;line-height:1.4" id="ex-q"></div>
+          <div id="ex-opts" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem"></div>
+          <div style="font-size:12px;color:var(--muted);min-height:20px" id="ex-feedback"></div>
+        </div>
+        <div id="exam-results" style="display:none;text-align:center;padding:2rem">
+          <div style="font-size:60px;margin-bottom:1rem" id="ex-emoji">🏆</div>
+          <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:.5rem" id="ex-score-txt"></div>
+          <div style="color:var(--muted);font-size:14px;margin-bottom:2rem" id="ex-grade-txt"></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem;margin-bottom:1.5rem;text-align:left" id="ex-review"></div>
+          <button class="btn-primary" style="max-width:200px;margin:0 auto" onclick="resetExam()">Try Again</button>
+        </div>
       </div>
     </div>
     <div class="panel" id="panel-profile">
@@ -1020,7 +1051,7 @@ function showScreen(id){
 }
 function enterApp(){
   showScreen('app-screen');
-  updateNav();buildHomePanel();buildExploreFilters();buildGlobalLB();goTab('home');
+  updateNav();buildHomePanel();buildExploreFilters();buildGlobalLB();buildExamSubjPicker();goTab('home');
 }
 function closeLesson(){
   if(G.pRaf)cancelAnimationFrame(G.pRaf);
@@ -1028,7 +1059,7 @@ function closeLesson(){
   showScreen('app-screen');
 }
 function goTab(t){
-  ['home','explore','multi','profile'].forEach(k=>{
+  ['home','explore','multi','profile','exam'].forEach(k=>{
     document.getElementById('tab-'+k)?.classList.toggle('active',k===t);
     document.getElementById('panel-'+k)?.classList.toggle('active',k===t);
   });
@@ -1777,10 +1808,23 @@ function createRoom(){
   toast(`Room created! Code: ${code}`,'tok');
 }
 function joinRoomP(){const c=prompt('Enter room code:','NOVA42');if(!c)return;document.getElementById('room-code').textContent=c.toUpperCase();document.getElementById('room-section').style.display='block';document.getElementById('game-section').style.display='none';document.getElementById('players-row').innerHTML=`<div class="player-chip"><div class="dot dot-on"></div>Host</div><div class="player-chip"><div class="dot dot-on"></div>${G.profile?.name||'You'}</div>`;toast('Joined room!','tok');}
-function quickMatch(){toast('🔍 Finding match...','');setTimeout(()=>{toast('⚡ Match found!','tok');setTimeout(startGame,1000);},2500);createRoom();}
+function startBotMatch(){
+  const botNames=['Newton Bot','Darwin AI','Curie-3','Hubble AI','Mendel Bot'];
+  const bot=botNames[Math.floor(Math.random()*botNames.length)];
+  document.getElementById('room-code').textContent='BOT';
+  document.getElementById('room-section').style.display='block';
+  document.getElementById('game-section').style.display='none';
+  document.getElementById('players-row').innerHTML=`
+    <div class="player-chip"><div class="dot dot-on"></div>${G.profile?.name||'You'}</div>
+    <div class="player-chip"><div class="dot" style="background:var(--purple)"></div>🤖 ${bot}</div>`;
+  G.botName=bot;
+  G.isBot=true;
+  toast(`🤖 ${bot} is ready!`,'tok');
+}
 function startGame(){
   G.gameQs=[...QUIZ_QS].sort(()=>Math.random()-.5).slice(0,5);G.qIdx=0;G.playerScore=0;
-  G.gameScores={[G.profile?.name||'You']:0,'StarLearner99':0};
+  const opponent = G.isBot ? `🤖 ${G.botName||'Bot'}` : 'Opponent';
+G.gameScores={[G.profile?.name||'You']:0,[opponent]:0};
   document.getElementById('game-section').style.display='block';showQ();
 }
 let _gtInt;
@@ -1796,7 +1840,12 @@ function showQ(){
   _gtInt=setInterval(()=>{G.timerCount--;document.getElementById('t-num').textContent=G.timerCount;document.getElementById('t-fill').style.width=(G.timerCount/15*100)+'%';if(G.timerCount<=5)document.getElementById('t-fill').style.background='linear-gradient(90deg,var(--accent3),var(--pink))';else document.getElementById('t-fill').style.background='linear-gradient(90deg,var(--green),var(--accent2))';if(G.timerCount<=0){clearInterval(_gtInt);nextQ();}},1000);
   updGLB();
 }
-function ansQ(i,ans){clearInterval(_gtInt);document.querySelectorAll('.q-opt').forEach((b,j)=>{b.classList.toggle('correct',j===ans);if(j===i&&i!==ans)b.classList.add('wrong');});if(i===ans){G.playerScore+=G.timerCount*10;G.gameScores[G.profile?.name||'You']=G.playerScore;G.xp+=5;updateNav();saveProgress();toast(`✅ Correct! +${G.timerCount*10} pts`,'tok');}else toast('❌ Wrong answer','');if(Math.random()>.4)G.gameScores['StarLearner99']=(G.gameScores['StarLearner99']||0)+Math.floor(Math.random()*110+30);document.getElementById('q-res').textContent=i===ans?'🎉 Correct!':'💡 Correct answer highlighted';updGLB();setTimeout(nextQ,1800);}
+function ansQ(i,ans){clearInterval(_gtInt);document.querySelectorAll('.q-opt').forEach((b,j)=>{b.classList.toggle('correct',j===ans);if(j===i&&i!==ans)b.classList.add('wrong');});if(i===ans){G.playerScore+=G.timerCount*10;G.gameScores[G.profile?.name||'You']=G.playerScore;G.xp+=5;updateNav();saveProgress();toast(`✅ Correct! +${G.timerCount*10} pts`,'tok');}else toast('❌ Wrong answer','');const opp=Object.keys(G.gameScores).find(k=>k!==( G.profile?.name||'You'));
+if(G.isBot){
+  const botChance = 0.3 + (G.grade||5)*0.04;
+  const botTime = Math.floor(Math.random()*12)+3;
+  if(Math.random()<botChance) G.gameScores[opp]=(G.gameScores[opp]||0)+botTime*10;
+}document.getElementById('q-res').textContent=i===ans?'🎉 Correct!':'💡 Correct answer highlighted';updGLB();setTimeout(nextQ,1800);}
 function nextQ(){G.qIdx++;showQ();}
 function endGame(){clearInterval(_gtInt);document.getElementById('q-txt').textContent='🏁 Battle Over!';document.getElementById('q-opts').innerHTML='';document.getElementById('q-res').textContent=`Your score: ${G.playerScore} pts`;G.xp+=50;updateNav();saveProgress();buildGlobalLB();toast('🏆 +50 bonus XP!','txp');}
 function updGLB(){const el=document.getElementById('game-lb');if(!el)return;el.innerHTML=Object.entries(G.gameScores).sort((a,b)=>b[1]-a[1]).map(([n,s],i)=>`<li class="lb-row"><span class="lb-rank ${i===0?'g':'s'}">${i===0?'🥇':'🥈'}</span><span class="lb-name">${n}</span><span class="lb-score">${s} pts</span></li>`).join('');}
@@ -1853,6 +1902,162 @@ window.addEventListener('load', async ()=>{
   }
   showScreen('auth-screen');
 });
+const EXAM_QUESTIONS = {
+  astronomy:[
+    {q:"A star has a parallax angle of 0.5 arcseconds. What is its distance in parsecs?",opts:["0.5 pc","1 pc","2 pc","4 pc"],ans:2,exp:"Distance (pc) = 1/parallax(arcsec) = 1/0.5 = 2 parsecs"},
+    {q:"What is the Schwarzschild radius of a 3-solar-mass black hole? (Rs = 2GM/c², G=6.67×10⁻¹¹, M☉=2×10³⁰kg, c=3×10⁸m/s)",opts:["~8.9 km","~3 km","~17.7 km","~1.5 km"],ans:0,exp:"Rs = 2 × 6.67×10⁻¹¹ × 6×10³⁰ / (9×10¹⁶) ≈ 8,870 m ≈ 8.9 km"},
+    {q:"Which spectral class is the hottest?",opts:["G","K","O","B"],ans:2,exp:"OBAFGKM — O-type stars burn at 30,000–60,000K"},
+    {q:"The cosmic microwave background radiation has a temperature of approximately:",opts:["0 K","2.7 K","100 K","273 K"],ans:1,exp:"The CMB is 2.725 K — relic radiation from 380,000 years after the Big Bang"},
+    {q:"Hubble's Law states v = H₀d. If H₀ = 70 km/s/Mpc and a galaxy is 200 Mpc away, what is its recession speed?",opts:["14,000 km/s","7,000 km/s","140 km/s","70,000 km/s"],ans:0,exp:"v = 70 × 200 = 14,000 km/s — about 4.7% the speed of light"},
+    {q:"What process powers main-sequence stars?",opts:["Nuclear fission","Gravitational collapse","Hydrogen fusion","Carbon fusion"],ans:2,exp:"Main sequence stars fuse hydrogen into helium in their cores via the proton-proton chain or CNO cycle"},
+    {q:"Saturn's moon Titan is unique because it has:",opts:["Oxygen atmosphere","Liquid methane lakes","Volcanic eruptions","A global ocean of water"],ans:1,exp:"Titan has stable liquid methane/ethane lakes — the only body besides Earth with stable surface liquids"},
+    {q:"What is a parsec in light-years?",opts:["1.58 ly","3.26 ly","4.24 ly","9.46 ly"],ans:1,exp:"1 parsec = 3.2616 light-years = 3.086×10¹⁶ metres"},
+    {q:"The Great Red Spot on Jupiter is:",opts:["A volcano","A continent","A storm larger than Earth","A moon shadow"],ans:2,exp:"The GRS is an anticyclonic storm ~16,000 km wide that has persisted for at least 400 years"},
+    {q:"What causes a Type Ia supernova?",opts:["Massive star core collapse","White dwarf exceeding Chandrasekhar limit","Neutron star merger","Black hole evaporation"],ans:1,exp:"A white dwarf accretes mass past 1.4 M☉ (Chandrasekhar limit), triggering runaway carbon fusion"},
+  ],
+  physics:[
+    {q:"A 5 kg block slides down a frictionless 30° incline. What is its acceleration?",opts:["4.9 m/s²","9.8 m/s²","8.5 m/s²","2.5 m/s²"],ans:0,exp:"a = g·sin(30°) = 9.8 × 0.5 = 4.9 m/s²"},
+    {q:"A circuit has R₁=4Ω and R₂=6Ω in parallel across 12V. What is total current?",opts:["1.2 A","5 A","3 A","2 A"],ans:1,exp:"I₁=12/4=3A, I₂=12/6=2A, Total=5A. Or: Rp=4×6/10=2.4Ω, I=12/2.4=5A"},
+    {q:"A wave has frequency 440 Hz and wavelength 0.773 m. What is its speed?",opts:["440 m/s","340 m/s","773 m/s","220 m/s"],ans:1,exp:"v = f × λ = 440 × 0.773 ≈ 340 m/s (speed of sound in air)"},
+    {q:"What is the de Broglie wavelength of an electron (m=9.11×10⁻³¹kg) moving at 2×10⁶ m/s? (h=6.63×10⁻³⁴)",opts:["3.64×10⁻¹⁰ m","6.63×10⁻³⁴ m","1.82×10⁻¹⁰ m","9.1×10⁻³¹ m"],ans:0,exp:"λ = h/mv = 6.63×10⁻³⁴ / (9.11×10⁻³¹ × 2×10⁶) = 3.64×10⁻¹⁰ m"},
+    {q:"A photon has energy 3.2×10⁻¹⁹ J. What is its frequency? (h=6.63×10⁻³⁴)",opts:["4.83×10¹⁴ Hz","3.2×10¹⁴ Hz","6.63×10¹⁴ Hz","2.1×10¹⁵ Hz"],ans:0,exp:"f = E/h = 3.2×10⁻¹⁹ / 6.63×10⁻³⁴ = 4.83×10¹⁴ Hz (visible light)"},
+    {q:"Which law states entropy of an isolated system always increases?",opts:["1st Law of Thermodynamics","2nd Law of Thermodynamics","3rd Law","Zeroth Law"],ans:1,exp:"The 2nd Law: ΔS ≥ 0 for isolated systems — disorder always increases"},
+    {q:"A 2kg object moving at 10 m/s collides and sticks to a stationary 3kg object. Final velocity?",opts:["4 m/s","6 m/s","10 m/s","2 m/s"],ans:0,exp:"Conservation of momentum: 2×10 = (2+3)×v → v = 20/5 = 4 m/s"},
+    {q:"What is the half-life concept in radioactive decay?",opts:["Time for all atoms to decay","Time for half the atoms to decay","Time for decay rate to double","Time between emissions"],ans:1,exp:"Half-life T½ is the time for half of a radioactive sample to decay: N(t) = N₀(½)^(t/T½)"},
+    {q:"A capacitor stores 0.5 × C × V². With C=4μF and V=100V, what is stored energy?",opts:["0.02 J","0.2 J","2 J","20 J"],ans:0,exp:"E = 0.5 × 4×10⁻⁶ × 100² = 0.5 × 4×10⁻⁶ × 10000 = 0.02 J"},
+    {q:"Which phenomenon proves light has wave properties?",opts:["Photoelectric effect","Diffraction","Compton scattering","Pair production"],ans:1,exp:"Diffraction — light bending around obstacles and interfering — is exclusively a wave property"},
+  ],
+  biology:[
+    {q:"Which structure controls what enters and exits the cell?",opts:["Nucleus","Cell wall","Plasma membrane","Mitochondria"],ans:2,exp:"The plasma membrane is selectively permeable — phospholipid bilayer with embedded proteins controlling transport"},
+    {q:"In a neuron, what causes depolarisation during an action potential?",opts:["K⁺ rushing in","Na⁺ rushing in","Cl⁻ rushing out","Ca²⁺ rushing in"],ans:1,exp:"Voltage-gated Na⁺ channels open, Na⁺ floods in, changing membrane potential from -70mV to +40mV"},
+    {q:"Identify the correct order of DNA replication:",opts:["Ligation→Helicase→Primase→Polymerase","Helicase→Primase→Polymerase→Ligation","Primase→Helicase→Ligation→Polymerase","Polymerase→Helicase→Primase→Ligation"],ans:1,exp:"Helicase unwinds DNA → Primase adds RNA primer → DNA Polymerase extends → Ligase joins Okazaki fragments"},
+    {q:"Which organ produces insulin AND digestive enzymes?",opts:["Liver","Gallbladder","Pancreas","Spleen"],ans:2,exp:"The pancreas has endocrine cells (islets of Langerhans) producing insulin/glucagon, AND exocrine cells producing digestive enzymes"},
+    {q:"In meiosis, crossing over increases genetic diversity. When does it occur?",opts:["Metaphase II","Prophase I","Anaphase I","Telophase II"],ans:1,exp:"Crossing over (synapsis/chiasmata formation) occurs during Prophase I when homologous chromosomes pair up"},
+    {q:"What is the correct base pairing in RNA transcription from DNA template 3'-ATCG-5'?",opts:["TAGC","UAGC","AUGC","TACG"],ans:1,exp:"DNA template 3'-ATCG-5' → mRNA 5'-UAGC-3'. RNA uses U instead of T, pairs with A."},
+    {q:"Which immune cells directly kill virus-infected cells?",opts:["B lymphocytes","Helper T cells","Cytotoxic T cells","Macrophages"],ans:2,exp:"CD8+ cytotoxic T cells recognise MHC-I complexes on infected cells and release perforin/granzymes to kill them"},
+    {q:"The sodium-potassium pump moves:",opts:["3Na⁺ in, 2K⁺ out","2Na⁺ out, 3K⁺ in","3Na⁺ out, 2K⁺ in","2Na⁺ in, 3K⁺ out"],ans:2,exp:"Na⁺/K⁺-ATPase pumps 3Na⁺ OUT and 2K⁺ IN per ATP, maintaining the electrochemical gradient"},
+    {q:"Which process converts pyruvate to acetyl-CoA?",opts:["Glycolysis","Oxidative phosphorylation","Pyruvate oxidation","Fermentation"],ans:2,exp:"Pyruvate decarboxylation (pyruvate oxidation) in the mitochondrial matrix converts pyruvate to acetyl-CoA + CO₂ + NADH"},
+    {q:"What is the function of the loop of Henle in the kidney?",opts:["Filtration of blood","Concentration of urine","Secretion of hormones","Reabsorption of glucose"],ans:1,exp:"The loop of Henle creates an osmotic gradient in the medulla, allowing the collecting duct to concentrate urine up to 1200 mOsm/L"},
+  ],
+  earth:[
+    {q:"The P-wave shadow zone exists between which angles from an earthquake epicenter?",opts:["0°–103°","103°–143°","143°–180°","60°–120°"],ans:1,exp:"P-waves are refracted by the liquid outer core, creating a shadow zone from 103° to 143°"},
+    {q:"Which type of plate boundary creates new oceanic crust?",opts:["Convergent","Transform","Divergent","Subduction"],ans:2,exp:"At divergent boundaries (mid-ocean ridges), magma wells up as plates separate, creating new oceanic crust"},
+    {q:"The Coriolis effect deflects moving air:",opts:["Left in NH, Right in SH","Right in NH, Left in SH","Always right","Always left"],ans:1,exp:"Earth's rotation deflects air to the right in the Northern Hemisphere and left in the Southern Hemisphere"},
+    {q:"Carbon-14 has a half-life of 5,730 years. A sample has 25% of original C-14. How old is it?",opts:["5,730 years","11,460 years","17,190 years","22,920 years"],ans:1,exp:"25% = (½)² → 2 half-lives → 2 × 5,730 = 11,460 years"},
+    {q:"What drives thermohaline circulation (deep ocean currents)?",opts:["Wind only","Temperature and salinity differences","Tidal forces","Earth's magnetic field"],ans:1,exp:"Dense cold salty water sinks in polar regions, driving a global conveyor belt circulation"},
+    {q:"The Richter scale is logarithmic. How much MORE energy does M7 release than M5?",opts:["2×","10×","100×","1000×"],ans:3,exp:"Each magnitude unit = 31.6× energy. Two units = 31.6² ≈ 1000× more energy"},
+    {q:"Which mineral has hardness 10 on Mohs scale?",opts:["Quartz","Feldspar","Corundum","Diamond"],ans:3,exp:"Diamond (carbon in cubic structure) is the hardest natural material at Mohs 10"},
+    {q:"The greenhouse effect works because CO₂:",opts:["Reflects sunlight","Absorbs outgoing infrared radiation","Produces heat directly","Blocks UV radiation"],ans:1,exp:"CO₂ is transparent to incoming shortwave solar radiation but absorbs outgoing longwave (infrared) radiation"},
+    {q:"What is the approximate age of Earth?",opts:["4.6 million years","4.6 billion years","13.8 billion years","1 billion years"],ans:1,exp:"Earth formed ~4.54 billion years ago from solar nebula — determined by radiometric dating of meteorites"},
+    {q:"Which seismic wave cannot travel through liquids?",opts:["P-waves","Surface waves","S-waves","Love waves"],ans:2,exp:"S-waves (shear waves) require a rigid medium — they cannot propagate through Earth's liquid outer core"},
+  ],
+  chemistry:[
+    {q:"Balance: __Fe + __O₂ → __Fe₂O₃. Coefficients are:",opts:["2,1,1","4,3,2","3,2,1","2,3,2"],ans:1,exp:"4Fe + 3O₂ → 2Fe₂O₃. Check: Fe: 4=4 ✓  O: 6=6 ✓"},
+    {q:"Calculate the molarity of 4g NaOH (MW=40) dissolved in 500mL water:",opts:["0.1 M","0.2 M","0.4 M","0.8 M"],ans:1,exp:"moles = 4/40 = 0.1 mol. Molarity = 0.1/0.5L = 0.2 M"},
+    {q:"Which quantum numbers describe the 3d subshell?",opts:["n=3, l=1","n=3, l=2","n=2, l=3","n=3, l=3"],ans:1,exp:"n=3 (3rd shell), l=2 (d subshell: s=0,p=1,d=2,f=3)"},
+    {q:"A reaction has ΔH=-285kJ and ΔS=-163 J/K at 298K. Is it spontaneous?",opts:["Yes, always","No, never","Yes, ΔG is negative","No, ΔG is positive"],ans:2,exp:"ΔG = ΔH - TΔS = -285,000 - (298×-163) = -285,000 + 48,574 = -236,426 J → negative → spontaneous"},
+    {q:"What is the oxidation state of Cr in K₂Cr₂O₇?",opts:["+3","+6","+7","+4"],ans:1,exp:"2(+1) + 2(Cr) + 7(-2) = 0 → 2Cr = 12 → Cr = +6"},
+    {q:"In the reaction rate law: rate = k[A]²[B], if [A] doubles, rate changes by:",opts:["2×","4×","8×","16×"],ans:1,exp:"Rate is second order in A. Doubling [A]: rate ∝ (2)² = 4× faster"},
+    {q:"Which functional group is present in amino acids but not carboxylic acids?",opts:["−COOH","−OH","−NH₂","C=O"],ans:2,exp:"Amino acids have BOTH −COOH (carboxyl) AND −NH₂ (amino) groups. The −NH₂ distinguishes them."},
+    {q:"Henderson-Hasselbalch: pH of buffer with pKa=4.74, [A⁻]=0.1M, [HA]=0.05M?",opts:["4.44","5.04","4.74","3.74"],ans:1,exp:"pH = 4.74 + log(0.1/0.05) = 4.74 + log(2) = 4.74 + 0.30 = 5.04"},
+    {q:"Which intermolecular force is responsible for water's unusually high boiling point?",opts:["London dispersion","Dipole-dipole","Hydrogen bonding","Ionic bonding"],ans:2,exp:"Water forms extensive hydrogen bonds (O-H···O) requiring extra energy to break → anomalously high bp of 100°C"},
+    {q:"How many mL of 2M HCl are needed to neutralise 50mL of 1M NaOH?",opts:["50 mL","25 mL","100 mL","12.5 mL"],ans:1,exp:"moles NaOH = 0.05L × 1M = 0.05 mol. moles HCl needed = 0.05 mol. V = 0.05/2 = 0.025L = 25 mL"},
+  ],
+  technology:[
+    {q:"What is the time complexity of binary search?",opts:["O(n)","O(log n)","O(n²)","O(1)"],ans:1,exp:"Binary search halves the search space each step → log₂n steps → O(log n)"},
+    {q:"In Python, what does [x**2 for x in range(5) if x%2==0] return?",opts:["[0,4,16]","[0,1,4,9,16]","[4,16]","[0,4]"],ans:0,exp:"x in range(5) = 0,1,2,3,4. Even: 0,2,4. Squared: 0²=0, 2²=4, 4²=16 → [0,4,16]"},
+    {q:"What does SQL JOIN return by default (INNER JOIN)?",opts:["All rows from both tables","Only matching rows from both tables","All rows from left table","All rows from right table"],ans:1,exp:"INNER JOIN returns only rows where the join condition matches in BOTH tables"},
+    {q:"In TCP/IP, which layer handles routing between networks?",opts:["Application","Transport","Network (Internet)","Data Link"],ans:2,exp:"The Network/Internet layer (IP protocol) handles logical addressing and routing between different networks"},
+    {q:"What is a buffer overflow vulnerability?",opts:["Too much RAM used","Writing data beyond allocated memory boundaries","A slow network","An infinite loop"],ans:1,exp:"Buffer overflow occurs when a program writes more data than a buffer can hold, overwriting adjacent memory — exploitable for arbitrary code execution"},
+    {q:"What does this return: bool('') in Python?",opts:["True","False","None","Error"],ans:1,exp:"Empty string is falsy in Python. bool('') = False. bool('any string') = True"},
+    {q:"Which sorting algorithm has worst-case O(n log n)?",opts:["Bubble sort","Quick sort","Merge sort","Insertion sort"],ans:2,exp:"Merge sort guarantees O(n log n) worst case. Quick sort degrades to O(n²) with bad pivots."},
+    {q:"In CSS, which property creates a new stacking context?",opts:["display:block","position:relative","opacity less than 1","margin:auto"],ans:2,exp:"opacity < 1 creates a new stacking context. Also: transform, filter, isolation:isolate, etc."},
+    {q:"What is the output of: console.log(typeof null) in JavaScript?",opts:["'null'","'undefined'","'object'","'boolean'"],ans:2,exp:"typeof null === 'object' is a famous JavaScript bug from 1995 that was never fixed for backwards compatibility"},
+    {q:"RSA encryption relies on the difficulty of:",opts:["Sorting large arrays","Factoring large prime products","Finding hash collisions","Reversing XOR operations"],ans:1,exp:"RSA security depends on the computational difficulty of factoring the product of two large prime numbers"},
+  ],
+};
+
+let _exSubj=null,_exQs=[],_exIdx=0,_exScore=0,_exAnswers=[],_exInt=null,_exSecs=900;
+
+function buildExamSubjPicker(){
+  document.getElementById('exam-subj-pick').innerHTML=SUBJECTS.map(s=>
+    `<div class="subject-card" style="padding:1rem;text-align:center" onclick="selectExamSubj('${s.id}',this)">
+      <div style="font-size:28px;margin-bottom:.4rem">${s.icon}</div>
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700">${s.name}</div>
+    </div>`).join('');
+}
+function selectExamSubj(id,el){
+  _exSubj=id;
+  document.querySelectorAll('#exam-subj-pick .subject-card').forEach(c=>c.style.borderColor='var(--border)');
+  el.style.borderColor='var(--accent2)';
+}
+function startExam(){
+  if(!_exSubj){toast('Pick a subject first!','');return;}
+  const pool=EXAM_QUESTIONS[_exSubj]||EXAM_QUESTIONS.physics;
+  _exQs=[...pool].sort(()=>Math.random()-.5).slice(0,10);
+  _exIdx=0;_exScore=0;_exAnswers=[];_exSecs=900;
+  document.getElementById('exam-lobby').style.display='none';
+  document.getElementById('exam-active').style.display='block';
+  document.getElementById('exam-results').style.display='none';
+  if(_exInt)clearInterval(_exInt);
+  _exInt=setInterval(()=>{
+    _exSecs--;
+    const m=Math.floor(_exSecs/60),s=_exSecs%60;
+    const el=document.getElementById('ex-tnum');if(el)el.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    const pct=(_exSecs/900)*100;
+    const tf=document.getElementById('ex-tfill');if(tf)tf.style.width=pct+'%';
+    if(_exSecs<=60&&tf)tf.style.background='linear-gradient(90deg,var(--accent3),var(--pink))';
+    if(_exSecs<=0){clearInterval(_exInt);finishExam();}
+  },1000);
+  showExamQ();
+}
+function showExamQ(){
+  if(_exIdx>=_exQs.length){finishExam();return;}
+  const q=_exQs[_exIdx];
+  document.getElementById('ex-qn').textContent=_exIdx+1;
+  document.getElementById('ex-q').textContent=q.q;
+  document.getElementById('ex-feedback').textContent='';
+  document.getElementById('ex-opts').innerHTML=q.opts.map((o,i)=>
+    `<button onclick="ansExam(${i})" style="background:var(--surface2);border:2px solid var(--border);border-radius:var(--r-sm);padding:.8rem 1rem;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);text-align:left;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">${o}</button>`
+  ).join('');
+}
+function ansExam(i){
+  const q=_exQs[_exIdx];const correct=i===q.ans;
+  _exAnswers.push({q:q.q,chosen:i,ans:q.ans,correct,exp:q.exp,opts:q.opts});
+  if(correct){_exScore++;document.getElementById('ex-feedback').innerHTML=`<span style="color:var(--green)">✅ Correct! ${q.exp}</span>`;}
+  else{document.getElementById('ex-feedback').innerHTML=`<span style="color:var(--accent3)">❌ Wrong. ${q.exp}</span>`;}
+  document.querySelectorAll('#ex-opts button').forEach((b,j)=>{b.style.borderColor=j===q.ans?'var(--green)':j===i&&!correct?'var(--accent3)':'var(--border)';b.disabled=true;});
+  setTimeout(()=>{_exIdx++;showExamQ();},1800);
+}
+function finishExam(){
+  clearInterval(_exInt);
+  document.getElementById('exam-active').style.display='none';
+  document.getElementById('exam-results').style.display='block';
+  const pct=Math.round(_exScore/10*100);
+  const grades=[[90,'A+','🏆','Outstanding!'],[80,'A','🌟','Excellent!'],[70,'B','👍','Good work!'],[60,'C','📚','Keep studying!'],[0,'F','💪','Keep going!']];
+  const [,letter,emoji,msg]=grades.find(([min])=>pct>=min);
+  document.getElementById('ex-emoji').textContent=emoji;
+  document.getElementById('ex-score-txt').textContent=`${_exScore}/10 — ${pct}%`;
+  document.getElementById('ex-grade-txt').textContent=`Grade: ${letter} · ${msg}`;
+  // XP reward
+  const xpGain=_exScore*15;G.xp+=xpGain;updateNav();saveProgress();
+  if(xpGain>0)toast(`⭐ +${xpGain} XP from exam!`,'txp');
+  // Review
+  document.getElementById('ex-review').innerHTML=`<div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;margin-bottom:.8rem">Question Review</div>`+
+    _exAnswers.map((a,i)=>`<div style="margin-bottom:.8rem;padding-bottom:.8rem;border-bottom:1px solid var(--border);font-size:12px">
+      <div style="font-weight:600;margin-bottom:3px">${i+1}. ${a.q}</div>
+      <div style="color:${a.correct?'var(--green)':'var(--accent3)'}">${a.correct?'✅':'❌'} Your answer: ${a.opts[a.chosen]}</div>
+      ${!a.correct?`<div style="color:var(--muted)">Correct: ${a.opts[a.ans]}</div>`:''}
+      <div style="color:var(--muted);margin-top:2px;font-style:italic">${a.exp}</div>
+    </div>`).join('');
+}
+function resetExam(){
+  _exSubj=null;_exQs=[];_exIdx=0;_exScore=0;_exAnswers=[];
+  document.getElementById('exam-lobby').style.display='block';
+  document.getElementById('exam-active').style.display='none';
+  document.getElementById('exam-results').style.display='none';
+  buildExamSubjPicker();
+}
 </script>
 </body>
 </html>
