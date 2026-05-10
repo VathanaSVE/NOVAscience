@@ -1845,7 +1845,8 @@ if(G.isBot){
   const botChance = 0.3 + (G.grade||5)*0.04;
   const botTime = Math.floor(Math.random()*12)+3;
   if(Math.random()<botChance) G.gameScores[opp]=(G.gameScores[opp]||0)+botTime*10;
-}document.getElementById('q-res').textContent=i===ans?'🎉 Correct!':'💡 Correct answer highlighted';updGLB();setTimeout(nextQ,1800);}
+}
+document.getElementById('q-res').textContent=i===ans?'🎉 Correct!':'💡 Correct answer highlighted';updGLB();setTimeout(nextQ,1800);}
 function nextQ(){G.qIdx++;showQ();}
 function endGame(){clearInterval(_gtInt);document.getElementById('q-txt').textContent='🏁 Battle Over!';document.getElementById('q-opts').innerHTML='';document.getElementById('q-res').textContent=`Your score: ${G.playerScore} pts`;G.xp+=50;updateNav();saveProgress();buildGlobalLB();toast('🏆 +50 bonus XP!','txp');}
 function updGLB(){const el=document.getElementById('game-lb');if(!el)return;el.innerHTML=Object.entries(G.gameScores).sort((a,b)=>b[1]-a[1]).map(([n,s],i)=>`<li class="lb-row"><span class="lb-rank ${i===0?'g':'s'}">${i===0?'🥇':'🥈'}</span><span class="lb-name">${n}</span><span class="lb-score">${s} pts</span></li>`).join('');}
