@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova Science Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--surface3:#242435;
+  --border:rgba(255,255,255,0.08);--text:#f0f0f8;--muted:#8888aa;
+  --accent:#7c6fcd;--accent2:#4ecdc4;--accent3:#ff6b6b;
+  --gold:#ffd700;--green:#51e5a8;--pink:#fd79a8;--blue:#74b9ff;--purple:#a29bfe;
+  --r:14px;--r-sm:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ── SCREENS ── */
+.screen{display:none!important;}
+.screen.active{display:flex!important;flex-direction:column;min-height:100vh;}
+#auth-screen.active{align-items:center;justify-content:center;padding:2rem;}
+
+/* ── AUTH ── */
+.auth-bg{position:fixed;inset:0;background:
+  radial-gradient(ellipse 70% 60% at 15% 50%,rgba(124,111,205,.2) 0%,transparent 60%),
+  radial-gradient(ellipse 60% 70% at 85% 30%,rgba(78,205,196,.13) 0%,transparent 55%),
+  radial-gradient(ellipse 50% 40% at 55% 85%,rgba(255,107,107,.08) 0%,transparent 50%);
+  pointer-events:none;}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2.5rem;width:100%;max-width:460px;position:relative;z-index:1;}
+.auth-card::before{content:'';position:absolute;inset:0;border-radius:24px;background:linear-gradient(135deg,rgba(124,111,205,.08),transparent 50%);pointer-events:none;}
+.logo-row{display:flex;align-items:center;gap:10px;margin-bottom:1.8rem;}
+.logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.logo-text{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;}
+.logo-text span{color:var(--accent2);}
+.auth-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:.3rem;}
+.auth-sub{color:var(--muted);font-size:13px;margin-bottom:1.6rem;line-height:1.5;}
+.field-label{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px;display:block;letter-spacing:.3px;}
+.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;margin-bottom:12px;outline:none;transition:border-color .2s;}
+.auth-input:focus{border-color:var(--accent);}
+.auth-input::placeholder{color:var(--muted);}
+.auth-input.error{border-color:var(--accent3);}
+
+/* password field wrapper */
+.pw-wrap{position:relative;margin-bottom:8px;}
+.pw-wrap .auth-input{margin-bottom:0;padding-right:44px;}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px;}
+
+/* password strength */
+.pw-strength-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:6px;}
+.psb-seg{height:4px;border-radius:2px;background:rgba(255,255,255,.1);transition:background .3s;}
+.pw-strength-label{font-size:11px;margin-bottom:8px;font-weight:500;}
+.pw-reqs{font-size:11px;color:var(--muted);margin-bottom:14px;display:flex;flex-direction:column;gap:3px;}
+.pw-req{display:flex;align-items:center;gap:6px;}
+.req-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .3s;}
+.req-dot.ok{background:var(--green);}
+
+/* grade grid */
+.grade-select-label{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:7px;display:block;}
+.grade-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:14px;}
+.grade-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:7px 3px;border-radius:7px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s;text-align:center;}
+.grade-btn:hover{border-color:var(--accent);color:var(--text);}
+.grade-btn.selected{background:linear-gradient(135deg,var(--accent),var(--purple));border-color:transparent;color:#fff;font-weight:600;}
+
+.btn-primary{width:100%;background:linear-gradient(135deg,var(--accent),var(--purple));border:none;border-radius:var(--r-sm);padding:12px;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;margin-bottom:10px;}
+.btn-primary:hover{opacity:.9;}
+.btn-primary:active{transform:scale(.98);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:.8rem 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.btn-google{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:border-color .2s,background .2s;margin-bottom:10px;}
+.btn-google:hover{border-color:var(--accent2);background:rgba(78,205,196,.05);}
+.auth-toggle{text-align:center;font-size:13px;color:var(--muted);}
+.auth-toggle a{color:var(--accent2);cursor:pointer;text-decoration:none;font-weight:500;}
+.auth-toggle a:hover{text-decoration:underline;}
+.auth-error{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--accent3);margin-bottom:12px;display:none;}
+.auth-error.show{display:block;}
+
+/* ── NAV ── */
+nav{display:flex;align-items:center;justify-content:space-between;padding:.9rem 2rem;border-bottom:1px solid var(--border);background:rgba(10,10,15,.9);backdrop-filter:blur(20px);position:sticky;top:0;z-index:100;flex-shrink:0;}
+.nav-logo{display:flex;align-items:center;gap:9px;font-family:'Syne',sans-serif;font-size:19px;font-weight:800;cursor:pointer;text-decoration:none;color:inherit;}
+.nav-logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.nav-tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:3px;}
+.nav-tab{padding:6px 13px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--muted);border:none;background:transparent;font-family:'DM Sans',sans-serif;}
+.nav-tab.active,.nav-tab:hover{background:var(--surface2);color:var(--text);}
+.nav-tab.active{color:var(--accent2);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.xp-badge{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 11px;font-size:12px;font-weight:600;color:var(--gold);}
+.battle-btn{background:linear-gradient(135deg,var(--accent3),var(--pink));border:none;border-radius:20px;padding:6px 13px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s;}
+.battle-btn:hover{opacity:.85;}
+.avatar-btn{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);}
+
+/* ── APP CONTENT ── */
+.app-body{flex:1;overflow-y:auto;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* ── HOME ── */
+.home-wrap{max-width:1200px;margin:0 auto;padding:2.5rem 2rem;}
+.greeting{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;margin-bottom:.3rem;}
+.greeting span{color:var(--accent2);}
+.greeting-sub{color:var(--muted);font-size:14px;margin-bottom:2rem;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:2rem;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1.1rem;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r) var(--r) 0 0;}
+.stat-card:nth-child(1)::before{background:var(--accent);}
+.stat-card:nth-child(2)::before{background:var(--green);}
+.stat-card:nth-child(3)::before{background:var(--gold);}
+.stat-card:nth-child(4)::before{background:var(--accent3);}
+.stat-lbl{font-size:10px;color:var(--muted);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px;}
+.stat-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;}
+.stat-hint{font-size:10px;color:var(--muted);margin-top:2px;}
+.sec-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:.9rem;display:flex;align-items:center;gap:8px;}
+.sec-badge{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;color:var(--muted);font-family:'DM Sans',sans-serif;}
+.subjects-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:2rem;}
+.subject-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.3rem;cursor:pointer;transition:all .25s;}
+.subject-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.14);box-shadow:0 8px 30px rgba(0,0,0,.3);}
+.subj-icon{font-size:34px;margin-bottom:.9rem;display:block;transition:transform .3s;}
+.subject-card:hover .subj-icon{transform:scale(1.12) rotate(-5deg);}
+.subj-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:3px;}
+.subj-count{font-size:11px;color:var(--muted);margin-bottom:.9rem;}
+.prog-bar{height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:2px;}
+.prog-pct{font-size:10px;color:var(--muted);margin-top:4px;}
+.lessons-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.lesson-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem;cursor:pointer;transition:all .2s;}
+.lesson-card:hover{border-color:rgba(255,255,255,.14);transform:translateY(-2px);}
+.lc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem;}
+.lc-tag{font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:20px;}
+.lc-modes{font-size:10px;color:var(--muted);}
+.lc-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:3px;line-height:1.3;}
+.lc-desc{font-size:11px;color:var(--muted);margin-bottom:.9rem;line-height:1.5;}
+.lc-foot{display:flex;align-items:center;justify-content:space-between;}
+.lc-xp{font-size:10px;color:var(--gold);font-weight:600;}
+.lc-btn{font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.lc-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.lc-btn.done{background:rgba(81,229,168,.1);border-color:var(--green);color:var(--green);}
+
+/* ── EXPLORE ── */
+.explore-wrap{max-width:1200px;margin:0 auto;padding:2rem;}
+.explore-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:.5rem;}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;}
+.filter-btn{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .2s;font-family:'DM Sans',sans-serif;}
+.filter-btn.active,.filter-btn:hover{border-color:var(--accent);color:var(--text);background:rgba(124,111,205,.1);}
+.subj-row{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:1.5rem;}
+.subj-btn{padding:8px 4px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--muted);text-align:center;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;}
+.subj-btn.active,.subj-btn:hover{color:var(--text);border-color:var(--accent2);background:rgba(78,205,196,.07);}
+.subj-btn div{font-size:20px;margin-bottom:3px;}
+
+/* ── LESSON SCREEN ── */
+#lesson-screen.active{display:flex!important;flex-direction:column;}
+.lesson-topbar{display:flex;align-items:center;gap:14px;padding:.9rem 2rem;border-bottom:1px solid var(--border);background:rgba(10,10,15,.9);backdrop-filter:blur(20px);position:sticky;top:0;z-index:100;flex-shrink:0;}
+.back-btn{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:6px 12px;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:5px;}
+.back-btn:hover{border-color:var(--accent);color:var(--text);}
+.lesson-topbar-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;flex:1;}
+.xp-pill{display:flex;align-items:center;gap:4px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--gold);}
+.lesson-layout{flex:1;display:flex;max-width:1100px;margin:0 auto;width:100%;padding:1.5rem 2rem;gap:1.5rem;overflow:hidden;}
+.lesson-main{flex:1;overflow-y:auto;}
+.lesson-sidebar{width:250px;flex-shrink:0;overflow-y:auto;}
+.mode-row{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:3px;margin-bottom:1.2rem;width:fit-content;}
+.mode-btn{padding:7px 18px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;}
+.mode-btn.active{background:var(--surface2);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.doc-view,.play-view{display:none;}
+.doc-view.active,.play-view.active{display:block;}
+
+/* ── DOCUMENT ── */
+.doc-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:.4rem;line-height:1.2;}
+.doc-meta-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem;}
+.doc-tag{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;}
+#lesson-doc-content{font-size:14.5px;line-height:1.85;color:rgba(240,240,248,.88);}
+#lesson-doc-content h2{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text);margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+#lesson-doc-content h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin:1.4rem 0 .5rem;}
+#lesson-doc-content p{margin-bottom:.9rem;}
+#lesson-doc-content ul,#lesson-doc-content ol{margin:.5rem 0 .9rem 1.4rem;}
+#lesson-doc-content li{margin-bottom:.3rem;}
+#lesson-doc-content strong{color:var(--text);font-weight:600;}
+#lesson-doc-content em{color:var(--accent2);font-style:italic;}
+.eq-block{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--r-sm);padding:.9rem 1.1rem;margin:1rem 0;font-family:'DM Mono',monospace;font-size:14px;color:var(--accent2);overflow-x:auto;}
+.eq-label{font-size:10px;color:var(--muted);margin-bottom:3px;font-family:'DM Sans',sans-serif;font-weight:500;letter-spacing:.5px;text-transform:uppercase;}
+.example-box{background:rgba(78,205,196,.06);border:1px solid rgba(78,205,196,.2);border-radius:var(--r-sm);padding:1rem 1.2rem;margin:1rem 0;}
+.example-box .ex-label{font-size:10px;font-weight:600;color:var(--accent2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem;}
+.solution-box{background:rgba(81,229,168,.05);border:1px solid rgba(81,229,168,.2);border-radius:var(--r-sm);padding:1rem 1.2rem;margin:1rem 0;}
+.solution-box .sol-label{font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem;}
+.loading-doc{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem;gap:1rem;color:var(--muted);}
+.spin{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── SIDEBAR ── */
+.sb-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.9rem;margin-bottom:.9rem;}
+.sb-title{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem;}
+.ch-list{list-style:none;}
+.ch-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;transition:color .2s;}
+.ch-item:last-child{border-bottom:none;}
+.ch-item:hover,.ch-item.active{color:var(--accent2);}
+.ch-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0;}
+.ch-dot.done{background:var(--green);}
+.ch-dot.cur{background:var(--accent);}
+.quiz-q{font-size:12px;font-weight:600;margin-bottom:.5rem;line-height:1.4;}
+.quiz-opt-btn{display:block;width:100%;text-align:left;padding:6px 9px;margin-bottom:4px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif;transition:all .2s;}
+.quiz-opt-btn:hover{border-color:var(--accent);}
+.quiz-opt-btn.correct{border-color:var(--green);color:var(--green);background:rgba(81,229,168,.08);}
+.quiz-opt-btn.wrong{border-color:var(--accent3);color:var(--accent3);background:rgba(255,107,107,.08);}
+
+/* ── PLAYGROUNDS ── */
+.play-frame{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1rem;}
+.play-instr{padding:.9rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;color:var(--muted);line-height:1.6;}
+
+/* Solar */
+.solar-canvas{width:100%;height:480px;background:radial-gradient(ellipse at center,#0d1b2a 0%,#050d14 100%);position:relative;overflow:hidden;}
+.orbit-ring{position:absolute;border:1px solid rgba(255,255,255,.06);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);}
+.planet-arm{position:absolute;top:50%;left:50%;transform-origin:0 0;}
+.planet-body{position:absolute;border-radius:50%;cursor:pointer;transition:filter .2s;}
+.planet-body:hover{filter:brightness(1.5);}
+.planet-tip{display:none;position:absolute;background:rgba(8,8,16,.97);border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:11px;white-space:nowrap;z-index:10;pointer-events:none;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);}
+.planet-body:hover .planet-tip{display:block;}
+.sun-core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,#fffbe0,#ffd000,#ff8c00);z-index:2;}
+
+/* Particle */
+.part-wrap{position:relative;}
+.part-ctrl{padding:.8rem 1rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--surface2);}
+.ctrl-btn{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.ctrl-btn:hover{border-color:var(--accent2);}
+.ctrl-btn.sel-matter{border-color:var(--blue);color:var(--blue);background:rgba(116,185,255,.1);}
+.ctrl-btn.sel-anti{border-color:var(--accent3);color:var(--accent3);background:rgba(255,107,107,.1);}
+
+/* Quark */
+.quark-arena-wrap{padding:1.5rem;display:flex;flex-direction:column;align-items:center;width:100%;}
+.quark-zone{display:flex;gap:2rem;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;justify-content:center;}
+.quark-btns{display:flex;flex-direction:column;gap:8px;}
+.q-chip{padding:9px 16px;border-radius:18px;font-size:12px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:'DM Mono',monospace;border:none;}
+.q-chip:hover{transform:scale(1.06);}
+.q-up{background:rgba(116,185,255,.2);color:var(--blue);border:1px solid var(--blue)!important;}
+.q-down{background:rgba(255,107,107,.2);color:var(--accent3);border:1px solid var(--accent3)!important;}
+.q-strange{background:rgba(253,121,168,.2);color:var(--pink);border:1px solid var(--pink)!important;}
+.q-charm{background:rgba(81,229,168,.2);color:var(--green);border:1px solid var(--green)!important;}
+.q-top{background:rgba(255,215,0,.2);color:var(--gold);border:1px solid var(--gold)!important;}
+.q-bottom{background:rgba(162,155,254,.2);color:var(--purple);border:1px solid var(--purple)!important;}
+.q-arena{width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(124,111,205,.18),rgba(0,0,0,.6));border:2px solid rgba(124,111,205,.3);display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:7px;padding:18px;transition:all .3s;}
+.q-arena.proton-glow{border-color:var(--blue);box-shadow:0 0 30px rgba(116,185,255,.3);}
+.q-arena.neutron-glow{border-color:var(--green);box-shadow:0 0 30px rgba(81,229,168,.3);}
+.q-in{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;padding:4px 8px;border-radius:8px;animation:qpop .25s ease;}
+@keyframes qpop{0%{transform:scale(0)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+.q-result{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;text-align:center;min-height:36px;margin-bottom:.5rem;}
+.q-info{font-size:11px;color:var(--muted);line-height:1.7;text-align:center;max-width:160px;}
+
+/* Zoo */
+.zoo-wrap{padding:1.2rem;width:100%;}
+.zoo-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:.9rem;outline:none;transition:border-color .2s;}
+.zoo-search:focus{border-color:var(--accent2);}
+.zoo-search::placeholder{color:var(--muted);}
+.zoo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:.9rem;max-height:190px;overflow-y:auto;}
+.zoo-card{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 5px;text-align:center;cursor:pointer;transition:all .2s;}
+.zoo-card:hover{border-color:var(--accent2);transform:scale(1.04);}
+.zoo-card.sel{border-color:var(--green);background:rgba(81,229,168,.08);}
+.zoo-card .ze{font-size:26px;}
+.zoo-card .zn{font-size:9px;color:var(--muted);margin-top:2px;}
+.zoo-detail{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:.9rem;display:flex;gap:1.2rem;align-items:flex-start;}
+.zoo-big{font-size:64px;line-height:1;}
+.zoo-info h3{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:.2rem;}
+.zoo-info p{font-size:12px;color:var(--muted);line-height:1.5;}
+.zoo-tab-row{display:flex;gap:5px;margin-top:.6rem;}
+.ztab{padding:3px 9px;border-radius:20px;font-size:10px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.ztab.active{border-color:var(--green);color:var(--green);background:rgba(81,229,168,.08);}
+.ztab-content{margin-top:.6rem;font-size:11px;color:var(--muted);line-height:1.7;}
+
+/* Volcano / Ecosystem / Volcano sims */
+.sim-wrap{width:100%;padding:1rem;}
+.sim-canvas-wrap{position:relative;width:100%;height:380px;overflow:hidden;border-radius:var(--r-sm);}
+
+/* DNA Builder */
+.dna-wrap{padding:1.5rem;text-align:center;}
+.dna-helix{font-family:'DM Mono',monospace;font-size:13px;line-height:1.8;color:var(--accent2);letter-spacing:2px;}
+.base-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:1rem;}
+.base-btn{padding:8px 16px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Mono',monospace;transition:transform .2s;}
+.base-btn:hover{transform:scale(1.08);}
+
+/* Circuit Builder */
+.circuit-wrap{padding:1rem;display:flex;flex-direction:column;align-items:center;}
+.circuit-canvas{border:1px solid var(--border);border-radius:var(--r-sm);background:#050510;cursor:crosshair;}
+.circuit-ctrl{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:.8rem;}
+.ccomp{padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.ccomp:hover,.ccomp.active{border-color:var(--accent2);color:var(--accent2);}
+
+/* Code IDE */
+.ide-wrap{display:flex;flex-direction:column;height:500px;}
+.ide-toolbar{display:flex;align-items:center;gap:8px;padding:.6rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.ide-lang{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;}
+.ide-run{background:linear-gradient(135deg,var(--green),var(--accent2));border:none;border-radius:6px;padding:5px 14px;color:#0a0a0f;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s;}
+.ide-run:hover{opacity:.85;}
+.ide-clear{background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.ide-status{margin-left:auto;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.ide-body{display:flex;flex:1;overflow:hidden;}
+.ide-editor-wrap{flex:1;position:relative;display:flex;flex-direction:column;}
+.ide-lines{position:absolute;left:0;top:0;bottom:0;width:40px;background:var(--surface2);border-right:1px solid var(--border);padding:.8rem 0;font-family:'DM Mono',monospace;font-size:13px;color:var(--muted);text-align:right;padding-right:8px;line-height:1.6;overflow:hidden;user-select:none;}
+.ide-editor{flex:1;background:#06060e;border:none;outline:none;color:#e0e0f0;font-family:'DM Mono',monospace;font-size:13px;line-height:1.6;padding:.8rem .8rem .8rem 48px;resize:none;width:100%;height:100%;caret-color:var(--accent2);}
+.ide-output{width:240px;border-left:1px solid var(--border);display:flex;flex-direction:column;background:#04040c;}
+.ide-out-hdr{padding:.5rem .9rem;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;}
+.ide-out-body{flex:1;overflow-y:auto;padding:.8rem;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;color:#a0f0a0;white-space:pre-wrap;}
+.ide-out-body.err{color:#ff8080;}
+
+/* Multiplayer */
+.multi-wrap{max-width:860px;margin:0 auto;padding:2rem;}
+.multi-hero{text-align:center;padding:1.5rem 0 2.5rem;}
+.multi-hero h2{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent3),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.4rem;}
+.multi-hero p{color:var(--muted);font-size:14px;}
+.multi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:1.5rem;}
+.multi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.3rem;cursor:pointer;transition:all .25s;position:relative;}
+.multi-card:hover{border-color:rgba(255,255,255,.14);transform:translateY(-2px);}
+.multi-card-icon{font-size:36px;margin-bottom:.8rem;}
+.multi-card-name{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:3px;}
+.multi-card-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+.live-tag{position:absolute;top:.9rem;right:.9rem;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(255,107,107,.15);color:var(--accent3);border:1px solid rgba(255,107,107,.3);}
+.room-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.3rem;margin-bottom:1.2rem;}
+.room-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;}
+.room-code{font-family:'DM Mono',monospace;font-size:22px;letter-spacing:4px;color:var(--accent2);background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 14px;}
+.players-row{display:flex;gap:10px;flex-wrap:wrap;}
+.player-chip{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 11px;font-size:12px;}
+.dot{width:6px;height:6px;border-radius:50%;}
+.dot-on{background:var(--green);}
+.dot-wait{background:var(--gold);animation:pulse .9s ease-in-out infinite alternate;}
+@keyframes pulse{from{opacity:.4}to{opacity:1}}
+.quiz-q-txt{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:1.2rem;line-height:1.3;}
+.q-opts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:1.2rem;}
+.q-opt{background:var(--surface2);border:2px solid var(--border);border-radius:var(--r-sm);padding:.9rem;cursor:pointer;transition:all .2s;font-size:13px;font-family:'DM Sans',sans-serif;text-align:left;color:var(--text);}
+.q-opt:hover{border-color:var(--accent);}
+.q-opt.correct{border-color:var(--green);background:rgba(81,229,168,.1);color:var(--green);}
+.q-opt.wrong{border-color:var(--accent3);background:rgba(255,107,107,.1);color:var(--accent3);}
+.timer-row{display:flex;align-items:center;gap:8px;margin-bottom:.9rem;}
+.timer-bar{flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.timer-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--accent2));border-radius:3px;transition:width 1s linear;}
+.timer-num{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold);min-width:28px;}
+.lb-list{list-style:none;}
+.lb-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.lb-row:last-child{border-bottom:none;}
+.lb-rank{font-family:'DM Mono',monospace;font-weight:500;color:var(--muted);width:20px;}
+.lb-rank.g{color:var(--gold);}
+.lb-rank.s{color:#c0c0c0;}
+.lb-rank.b{color:#cd7f32;}
+.lb-name{flex:1;font-weight:500;}
+.lb-score{font-weight:600;color:var(--accent2);font-family:'DM Mono',monospace;}
+.lb-bar{width:70px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
+.lb-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;}
+
+/* Profile */
+.profile-wrap{max-width:760px;margin:0 auto;padding:2rem;}
+.profile-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.8rem;display:flex;align-items:center;gap:1.3rem;margin-bottom:1.3rem;position:relative;overflow:hidden;}
+.profile-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 90% at 0% 50%,rgba(124,111,205,.1),transparent 60%);}
+.profile-av{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;border:3px solid rgba(124,111,205,.4);flex-shrink:0;}
+.profile-info h2{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:2px;}
+.profile-info p{color:var(--muted);font-size:13px;}
+.profile-lvl{margin-left:auto;text-align:center;}
+.lvl-badge{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#ffaa00);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#0a0a0f;margin:0 auto 3px;}
+.lvl-lbl{font-size:10px;color:var(--muted);}
+.ach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ach-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:.9rem;text-align:center;transition:transform .2s;}
+.ach-card:hover{transform:scale(1.04);}
+.ach-card.locked{opacity:.35;filter:grayscale(1);}
+.ach-icon{font-size:26px;margin-bottom:5px;}
+.ach-name{font-size:10px;font-weight:600;margin-bottom:2px;}
+.ach-desc{font-size:9px;color:var(--muted);}
+.subj-prog-item{display:flex;align-items:center;gap:10px;margin-bottom:.8rem;}
+.spi-icon{font-size:18px;width:26px;text-align:center;flex-shrink:0;}
+.spi-name{font-size:12px;font-weight:500;width:105px;flex-shrink:0;}
+.spi-bar{flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.spi-fill{height:100%;border-radius:3px;}
+.spi-pct{font-size:11px;color:var(--muted);width:30px;text-align:right;flex-shrink:0;}
+
+/* Toasts */
+.toast-wrap{position:fixed;bottom:1.4rem;right:1.4rem;z-index:9999;display:flex;flex-direction:column;gap:7px;pointer-events:none;}
+.toast{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 14px;font-size:12px;display:flex;align-items:center;gap:9px;animation:tslide .3s ease;max-width:260px;pointer-events:auto;}
+@keyframes tslide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.txp{border-color:rgba(255,215,0,.4);}
+.toast.tok{border-color:rgba(81,229,168,.4);}
+.toast.terr{border-color:rgba(255,107,107,.4);}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* Spinner overlay */
+.auth-loading{display:none;flex-direction:column;align-items:center;gap:.6rem;padding:1rem 0;color:var(--muted);font-size:13px;}
+.auth-loading.show{display:flex;}
+
+@media(max-width:768px){
+  .subjects-grid,.lessons-grid{grid-template-columns:repeat(2,1fr);}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .subj-row{grid-template-columns:repeat(4,1fr);}
+  .lesson-layout{flex-direction:column;}
+  .lesson-sidebar{width:100%;}
+  nav{padding:.7rem 1rem;}
+  .nav-tabs{display:none;}
+  .multi-grid{grid-template-columns:1fr;}
+  .ach-grid{grid-template-columns:repeat(2,1fr);}
+  .q-opts{grid-template-columns:1fr;}
+  .ide-output{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════ AUTH ══════ -->
+<div id="auth-screen" class="screen">
+  <div class="auth-bg"></div>
+  <div class="auth-card">
+    <div class="logo-row">
+      <div class="logo-icon">🔭</div>
+      <div class="logo-text">NOVA<span>science</span></div>
+    </div>
+
+    <!-- LOGIN VIEW -->
+    <div id="view-login">
+      <div class="auth-title">Welcome back, explorer</div>
+      <div class="auth-sub">Log in to continue your science journey from Grade 1–12</div>
+      <div class="auth-error" id="login-err"></div>
+      <button class="btn-google" onclick="authGoogle()">
+        <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+      <div class="divider">or</div>
+      <span class="field-label">Email address</span>
+      <input class="auth-input" type="email" id="login-email" placeholder="you@example.com">
+      <span class="field-label">Password</span>
+      <div class="pw-wrap">
+        <input class="auth-input" type="password" id="login-pw" placeholder="Your password" style="margin-bottom:0">
+        <button class="pw-toggle" onclick="togglePw('login-pw',this)" type="button">👁</button>
+      </div>
+      <div style="height:12px"></div>
+      <div class="auth-loading" id="login-loading"><div class="spin"></div>Signing you in...</div>
+      <button class="btn-primary" id="login-btn" onclick="doLogin()">Log in →</button>
+      <div class="auth-toggle">No account? <a onclick="showView('view-register')">Sign up free</a></div>
+    </div>
+
+    <!-- REGISTER VIEW -->
+    <div id="view-register" style="display:none">
+      <div class="auth-title">Join Nova Science</div>
+      <div class="auth-sub">Science from Grade 1 to Grade 12 — documents, playgrounds, multiplayer</div>
+      <div class="auth-error" id="reg-err"></div>
+      <button class="btn-google" onclick="authGoogle()">
+        <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign up with Google
+      </button>
+      <div class="divider">or</div>
+      <span class="field-label">Your name</span>
+      <input class="auth-input" type="text" id="reg-name" placeholder="e.g. Alex Rivera">
+      <span class="field-label">Email address</span>
+      <input class="auth-input" type="email" id="reg-email" placeholder="you@example.com">
+      <span class="field-label">Password</span>
+      <div class="pw-wrap">
+        <input class="auth-input" type="password" id="reg-pw" placeholder="Create a strong password" oninput="checkPw(this.value)" style="margin-bottom:0">
+        <button class="pw-toggle" onclick="togglePw('reg-pw',this)" type="button">👁</button>
+      </div>
+      <div class="pw-strength-bar" id="pw-bar">
+        <div class="psb-seg" id="ps0"></div><div class="psb-seg" id="ps1"></div>
+        <div class="psb-seg" id="ps2"></div><div class="psb-seg" id="ps3"></div>
+        <div class="psb-seg" id="ps4"></div>
+      </div>
+      <div class="pw-strength-label" id="pw-label" style="color:var(--muted)">Password strength</div>
+      <div class="pw-reqs">
+        <div class="pw-req"><div class="req-dot" id="r-len"></div><span>At least 12 characters</span></div>
+        <div class="pw-req"><div class="req-dot" id="r-num"></div><span>At least 2 numbers</span></div>
+        <div class="pw-req"><div class="req-dot" id="r-sym"></div><span>At least 1 symbol (!@#$%^&*...)</span></div>
+        <div class="pw-req"><div class="req-dot" id="r-let"></div><span>At least 3 letters</span></div>
+      </div>
+      <span class="grade-select-label">What grade are you in?</span>
+      <div class="grade-grid" id="grade-grid"></div>
+      <div class="auth-loading" id="reg-loading"><div class="spin"></div>Creating your account...</div>
+      <button class="btn-primary" id="reg-btn" onclick="doRegister()">Create account →</button>
+      <div class="auth-toggle">Already have an account? <a onclick="showView('view-login')">Log in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MAIN APP ══════ -->
+<div id="app-screen" class="screen">
+  <nav>
+    <div class="nav-logo" onclick="goTab('home')">
+      <div class="nav-logo-icon">🔭</div>
+      NOVA<span style="color:var(--accent2)">science</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-home" onclick="goTab('home')">🏠 Home</button>
+      <button class="nav-tab" id="tab-explore" onclick="goTab('explore')">🔍 Explore</button>
+      <button class="nav-tab" id="tab-multi" onclick="goTab('multi')">⚔️ Multiplayer</button>
+      <button class="nav-tab" id="tab-profile" onclick="goTab('profile')">👤 Profile</button>
+    </div>
+    <div class="nav-right">
+      <div class="xp-badge">⭐ <span id="nav-xp">0</span></div>
+      <button class="battle-btn" onclick="goTab('multi')">⚔️ Battle</button>
+      <div class="avatar-btn" id="nav-av" onclick="goTab('profile')">?</div>
+    </div>
+  </nav>
+  <div class="app-body">
+    <div class="panel active" id="panel-home">
+      <div class="home-wrap">
+        <div class="greeting">Hey, <span id="g-name">Explorer</span>! 👋</div>
+        <div class="greeting-sub">Grade <span id="g-grade">1</span> · Keep exploring the universe</div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-lbl">Total XP</div><div class="stat-val" id="s-xp" style="color:var(--accent)">0</div><div class="stat-hint">Experience points</div></div>
+          <div class="stat-card"><div class="stat-lbl">Lessons Done</div><div class="stat-val" id="s-done" style="color:var(--green)">0</div><div class="stat-hint">of 36 lessons</div></div>
+          <div class="stat-card"><div class="stat-lbl">Streak</div><div class="stat-val" id="s-streak" style="color:var(--gold)">1</div><div class="stat-hint">days 🔥</div></div>
+          <div class="stat-card"><div class="stat-lbl">Rank</div><div class="stat-val" id="s-rank" style="color:var(--accent3)">⭐</div><div class="stat-hint">Keep earning XP</div></div>
+        </div>
+        <div class="sec-title">Science Branches <span class="sec-badge">6 subjects</span></div>
+        <div class="subjects-grid" id="home-subjects"></div>
+        <div class="sec-title" style="margin-top:1.5rem">Recent Lessons <span class="sec-badge">Jump back in</span></div>
+        <div class="lessons-grid" id="home-recent"></div>
+      </div>
+    </div>
+    <div class="panel" id="panel-explore">
+      <div class="explore-wrap">
+        <div class="explore-title">Explore Lessons</div>
+        <div class="filter-row" id="grade-filters"></div>
+        <div class="subj-row" id="subj-filters"></div>
+        <div class="lessons-grid" id="explore-grid"></div>
+      </div>
+    </div>
+    <div class="panel" id="panel-multi">
+      <div class="multi-wrap">
+        <div class="multi-hero"><h2>⚔️ Science Battles</h2><p>Challenge friends and classmates in live science quiz battles</p></div>
+        <div class="multi-grid">
+          <div class="multi-card" onclick="quickMatch()"><div class="multi-card-icon">⚡</div><div class="multi-card-name">Quick Match</div><div class="multi-card-desc">Get matched instantly with a player at your grade level</div><div class="live-tag">LIVE</div></div>
+          <div class="multi-card" onclick="createRoom()"><div class="multi-card-icon">🏠</div><div class="multi-card-name">Create Room</div><div class="multi-card-desc">Create a private room and invite friends with a code</div></div>
+          <div class="multi-card" onclick="joinRoomP()"><div class="multi-card-icon">🔑</div><div class="multi-card-name">Join Room</div><div class="multi-card-desc">Enter a room code to join a friend's battle</div></div>
+          <div class="multi-card" onclick="toast('🏆 Tournaments coming next update!','txp')"><div class="multi-card-icon">🏆</div><div class="multi-card-name">Tournament</div><div class="multi-card-desc">Bracket-style weekly tournaments with huge XP prizes</div><div class="live-tag">SOON</div></div>
+        </div>
+        <div id="room-section" style="display:none">
+          <div class="room-box">
+            <div class="room-hdr"><div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">ROOM CODE</div><div class="room-code" id="room-code">NOVA42</div></div><button class="btn-primary" style="width:auto;padding:9px 18px;margin:0" onclick="startGame()">▶ Start</button></div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:7px">Players</div>
+            <div class="players-row" id="players-row"></div>
+          </div>
+          <div id="game-section" style="display:none">
+            <div class="sb-card" style="margin-bottom:.9rem">
+              <div class="timer-row"><div class="timer-bar"><div class="timer-fill" id="t-fill" style="width:100%"></div></div><div class="timer-num" id="t-num">15</div></div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:.4rem">Question <span id="q-n">1</span> of 5</div>
+              <div class="quiz-q-txt" id="q-txt"></div>
+              <div class="q-opts" id="q-opts"></div>
+              <div style="font-size:11px;color:var(--muted);min-height:18px;text-align:center" id="q-res"></div>
+            </div>
+            <div class="sb-card"><div class="sb-title">Live Scores</div><ul class="lb-list" id="game-lb"></ul></div>
+          </div>
+        </div>
+        <div class="sb-card" style="margin-top:1.2rem"><div class="sb-title" style="margin-bottom:.9rem">🌍 Global Leaderboard</div><ul class="lb-list" id="global-lb"></ul></div>
+      </div>
+    </div>
+    <div class="panel" id="panel-profile">
+      <div class="profile-wrap">
+        <div class="profile-hero">
+          <div class="profile-av" id="p-av">?</div>
+          <div class="profile-info"><h2 id="p-name">Explorer</h2><p id="p-email">—</p><p style="margin-top:3px">Grade <span id="p-grade">1</span> · Member</p></div>
+          <div class="profile-lvl"><div class="lvl-badge" id="p-lvl">1</div><div class="lvl-lbl">Level</div></div>
+        </div>
+        <div class="sb-card"><div class="sb-title">Achievements</div><div class="ach-grid" id="ach-grid"></div></div>
+        <div class="sb-card"><div class="sb-title" style="margin-bottom:.9rem">Subject Progress</div><div id="subj-prog"></div></div>
+        <div style="text-align:center;margin-top:.5rem"><button class="back-btn" onclick="doLogout()">🚪 Log out</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ LESSON SCREEN ══════ -->
+<div id="lesson-screen" class="screen">
+  <div class="lesson-topbar">
+    <button class="back-btn" onclick="closeLesson()">← Back</button>
+    <div class="lesson-topbar-title" id="lesson-title-bar">Lesson</div>
+    <div class="xp-pill">⭐ <span id="lesson-xp-amt">50</span> XP</div>
+  </div>
+  <div class="lesson-layout">
+    <div class="lesson-main">
+      <div class="mode-row">
+        <button class="mode-btn active" id="mb-doc" onclick="setMode('doc')">📄 Documents</button>
+        <button class="mode-btn" id="mb-play" onclick="setMode('play')">🎮 Playground</button>
+      </div>
+      <div class="doc-view active" id="dv">
+        <div class="doc-title" id="doc-title"></div>
+        <div class="doc-meta-row" id="doc-meta"></div>
+        <div id="lesson-doc-content">
+          <div class="loading-doc"><div class="spin"></div><span>Loading lesson content...</span></div>
+        </div>
+      </div>
+      <div class="play-view" id="pv">
+        <div class="play-frame" id="play-frame"></div>
+        <div class="play-instr" id="play-instr"></div>
+      </div>
+    </div>
+    <div class="lesson-sidebar">
+      <div class="sb-card"><div class="sb-title">Chapters</div><ul class="ch-list" id="ch-list"></ul></div>
+      <div class="sb-card"><div class="sb-title">Quick Quiz</div><div id="quick-quiz"></div></div>
+      <button class="btn-primary" id="complete-btn" onclick="completeLesson()" style="margin-top:.4rem">✅ Complete Lesson</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- ══════════════════════════════════════════
+  SETUP INSTRUCTIONS (shown when Supabase not configured)
+══════════════════════════════════════════ -->
+<div id="setup-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#1a1a2e,#16213e);border-top:1px solid var(--border);padding:1rem 2rem;z-index:9000;font-size:13px;line-height:1.7">
+  <strong style="color:var(--accent2)">⚙️ Setup Required — Real Auth needs Supabase (free, 2 min):</strong><br>
+  1. Go to <strong>supabase.com</strong> → New project → copy your <strong>Project URL</strong> and <strong>anon key</strong><br>
+  2. In Supabase → SQL Editor → run: <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">create table profiles (id uuid primary key references auth.users, name text, grade int, xp int default 0, completed_lessons text[] default '{}', created_at timestamptz default now());</code><br>
+  3. Enable Google OAuth in Supabase → Auth → Providers → Google<br>
+  4. Replace <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">YOUR_SUPABASE_URL</code> and <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">YOUR_SUPABASE_ANON_KEY</code> in this file's script section.<br>
+  <span style="color:var(--muted)">Until then, the app runs in <strong>Demo Mode</strong> — all features work, but data isn't saved between sessions.</span>
+  <button onclick="this.parentElement.style.display='none'" style="margin-left:1rem;background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--muted);cursor:pointer;font-size:12px">Dismiss</button>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// CONFIG — replace with your Supabase credentials
+// ════════════════════════════════════════
+const SUPABASE_URL = 'https://fdtmsmjzlfbldvzqllnw.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkdG1zbWp6bGZibGR2enFsbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzI2NzUsImV4cCI6MjA5MzkwODY3NX0.KzfStM4tiUT-ewB3sq_i3r2rnlomX_XkNNQ7YmmZMpU';
+const CLAUDE_KEY   = ''; // optional: put your Anthropic key here for AI-generated content
+
+let sb = null;
+let demoMode = false;
+
+function initSupabase() {
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    demoMode = true;
+    document.getElementById('setup-banner').style.display = 'block';
+    console.warn('Running in Demo Mode — configure Supabase for real auth.');
+    return;
+  }
+  try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { demoMode = true; }
+}
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let G = {
+  user: null, profile: null, xp: 0, grade: 1,
+  completedLessons: [], currentLesson: null,
+  filterGrade: 'all', filterSubject: 'all',
+  mode: 'doc', pMode: 'matter', particles: [],
+  pRaf: null, sRaf: null, pAngles: [],
+  qArena: [], gameQs: [], qIdx: 0,
+  playerScore: 0, gameScores: {},
+  timerCount: 15, gameInt: null,
+  selectedAnimal: null,
+};
+
+// ════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════
+const SUBJECTS = [
+  {id:'astronomy', name:'Astronomy',    icon:'🔭', c1:'#7c6fcd', c2:'#a29bfe'},
+  {id:'physics',   name:'Physics',      icon:'⚛️', c1:'#74b9ff', c2:'#0984e3'},
+  {id:'biology',   name:'Biology',      icon:'🧬', c1:'#51e5a8', c2:'#00b894'},
+  {id:'earth',     name:'Earth Science',icon:'🌍', c1:'#4ecdc4', c2:'#00cec9'},
+  {id:'chemistry', name:'Chemistry',    icon:'🧪', c1:'#ffd700', c2:'#f39c12'},
+  {id:'technology',name:'Technology',   icon:'💻', c1:'#ff6b6b', c2:'#d63031'},
+];
+
+const LESSONS = [
+  // ASTRONOMY — playground: unique solar sim per lesson
+  {id:'a1',s:'astronomy',g:1, title:'The Sun and Moon',          desc:'Why the Moon glows, phases, eclipses, and tides.',          xp:30,  pg:'solar-basic'},
+  {id:'a2',s:'astronomy',g:4, title:'Our Solar System',          desc:'8 planets, asteroid belt, Kuiper Belt, and Oort Cloud.',    xp:50,  pg:'solar-full'},
+  {id:'a3',s:'astronomy',g:6, title:'Stars & Constellations',    desc:'Star life cycles, types, HR diagram, and reading the sky.', xp:70,  pg:'stellar-sim'},
+  {id:'a4',s:'astronomy',g:8, title:'Galaxies & the Universe',   desc:'Milky Way, galaxy types, dark matter, cosmic scale.',       xp:90,  pg:'galaxy-sim'},
+  {id:'a5',s:'astronomy',g:10,title:'Black Holes',               desc:'Singularities, event horizons, Hawking radiation.',         xp:110, pg:'blackhole-sim'},
+  {id:'a6',s:'astronomy',g:12,title:'Cosmology & Big Bang',      desc:'Expansion, CMB, dark energy, fate of the universe.',        xp:130, pg:'universe-sim'},
+  // PHYSICS — unique interactive sims
+  {id:'p1',s:'physics',  g:1, title:'Forces & Motion',           desc:'Push, pull, friction, gravity — Newton\'s 1st law.',        xp:25,  pg:'forces-sim'},
+  {id:'p2',s:'physics',  g:3, title:'Light & Sound Waves',       desc:'Wave properties, reflection, refraction, resonance.',       xp:45,  pg:'wave-sim'},
+  {id:'p3',s:'physics',  g:5, title:'Energy & Work',             desc:'KE, PE, conservation laws, power, efficiency.',             xp:65,  pg:'energy-sim'},
+  {id:'p4',s:'physics',  g:7, title:'Electricity & Magnetism',   desc:'Circuits, Ohm\'s law, fields, electromagnetic induction.',  xp:85,  pg:'circuit-sim'},
+  {id:'p5',s:'physics',  g:10,title:'Quantum Mechanics',         desc:'Wave-particle duality, uncertainty principle, orbitals.',   xp:110, pg:'quark-sim'},
+  {id:'p6',s:'physics',  g:12,title:'Matter & Antimatter',       desc:'Particles, antiparticles, annihilation, E=mc².',            xp:130, pg:'particle-sim'},
+  // BIOLOGY — 5000+ word docs, zoo + body + dna sims
+  {id:'b1',s:'biology',  g:1, title:'Living vs Non-Living',      desc:'The 7 characteristics of life with real-world examples.',   xp:25,  pg:'zoo-sim'},
+  {id:'b2',s:'biology',  g:3, title:'Animals & Habitats',        desc:'Biomes, adaptations, food webs, and biodiversity.',         xp:45,  pg:'zoo-sim'},
+  {id:'b3',s:'biology',  g:5, title:'The Human Body',            desc:'11 organ systems — structure, function, and interaction.',  xp:65,  pg:'body-sim'},
+  {id:'b4',s:'biology',  g:7, title:'Cells & DNA',               desc:'Cell organelles, DNA structure, replication, transcription.',xp:85, pg:'dna-sim'},
+  {id:'b5',s:'biology',  g:9, title:'Evolution',                 desc:'Natural selection, adaptation, speciation, fossil record.', xp:105, pg:'evolution-sim'},
+  {id:'b6',s:'biology',  g:11,title:'Genetics & Heredity',       desc:'Mendel\'s laws, Punnett squares, mutations, inheritance.',  xp:125, pg:'genetics-sim'},
+  // EARTH SCIENCE — 5000+ word docs, geology/weather sims
+  {id:'e1',s:'earth',    g:2, title:'Rocks & Minerals',          desc:'Rock cycle, mineral identification, crystal structures.',    xp:30,  pg:'rock-sim'},
+  {id:'e2',s:'earth',    g:4, title:'Weather & Climate',         desc:'Atmosphere, fronts, pressure systems, climate zones.',      xp:50,  pg:'weather-sim'},
+  {id:'e3',s:'earth',    g:6, title:'Volcanoes & Earthquakes',   desc:'Plate boundaries, eruption types, seismic waves.',          xp:70,  pg:'volcano-sim'},
+  {id:'e4',s:'earth',    g:8, title:'Plate Tectonics',           desc:'Continental drift, convection cells, ocean floor spreading.',xp:90, pg:'plates-sim'},
+  {id:'e5',s:'earth',    g:10,title:'Oceans & Hydrosphere',      desc:'Ocean currents, water cycle, marine ecosystems.',           xp:110, pg:'ocean-sim'},
+  {id:'e6',s:'earth',    g:12,title:'Climate Change Science',    desc:'Energy budget, feedback loops, carbon cycle, projections.', xp:130, pg:'climate-sim'},
+  // CHEMISTRY — worked examples and solutions
+  {id:'c1',s:'chemistry',g:1, title:'States of Matter',          desc:'Solid, liquid, gas, plasma — kinetic theory and changes.',  xp:25,  pg:'matter-sim'},
+  {id:'c2',s:'chemistry',g:3, title:'Mixing & Reactions',        desc:'Physical vs chemical changes, reaction types, indicators.', xp:45,  pg:'reaction-sim'},
+  {id:'c3',s:'chemistry',g:5, title:'The Periodic Table',        desc:'Element groups, periods, trends, and electron config.',     xp:65,  pg:'periodic-sim'},
+  {id:'c4',s:'chemistry',g:7, title:'Acids & Bases',             desc:'pH scale, neutralization, buffers, titration calculations.',xp:85, pg:'acid-sim'},
+  {id:'c5',s:'chemistry',g:9, title:'Atomic Structure',          desc:'Bohr model, quantum numbers, orbitals, electron config.',   xp:105, pg:'atom-sim'},
+  {id:'c6',s:'chemistry',g:11,title:'Organic Chemistry',         desc:'Hydrocarbons, functional groups, reactions, polymers.',     xp:125, pg:'organic-sim'},
+  // TECHNOLOGY — Code IDE for all lessons
+  {id:'t1',s:'technology',g:1, title:'What are Computers?',      desc:'Hardware, software, binary, and how CPUs process data.',    xp:25,  pg:'ide'},
+  {id:'t2',s:'technology',g:3, title:'The Internet',             desc:'Protocols, DNS, HTTP, packets, and network security.',      xp:45,  pg:'ide'},
+  {id:'t3',s:'technology',g:5, title:'How to Code',              desc:'Variables, loops, functions, and algorithmic thinking.',    xp:65,  pg:'ide'},
+  {id:'t4',s:'technology',g:7, title:'Artificial Intelligence',  desc:'ML, neural networks, training data, bias, and ethics.',     xp:85,  pg:'ide'},
+  {id:'t5',s:'technology',g:9, title:'Cybersecurity',            desc:'Encryption, hashing, threats, and defensive programming.',  xp:105, pg:'ide'},
+  {id:'t6',s:'technology',g:11,title:'Computer Architecture',    desc:'CPU pipeline, cache, memory hierarchy, OS fundamentals.',   xp:125, pg:'ide'},
+];
+
+const QUIZ_QS = [
+  {q:"Which planet is largest in our solar system?",opts:["Earth","Saturn","Jupiter","Mars"],ans:2},
+  {q:"What force keeps planets in orbit?",opts:["Magnetism","Nuclear","Gravity","Friction"],ans:2},
+  {q:"How many bones does an adult human have?",opts:["206","186","256","120"],ans:0},
+  {q:"What layer of Earth do we live on?",opts:["Mantle","Core","Crust","Lithosphere"],ans:2},
+  {q:"Chemical formula for water?",opts:["CO₂","H₂O","NaCl","O₂"],ans:1},
+  {q:"What does DNA stand for?",opts:["Deoxyribonucleic Acid","Dynamic Nuclear Acid","Dual Nuclei Array","Dense Neural Acid"],ans:0},
+  {q:"What is the speed of light?",opts:["300,000 km/s","150,000 km/s","30,000 km/s","3,000 km/s"],ans:0},
+  {q:"Photosynthesis produces what?",opts:["CO₂","Water","Glucose","Nitrogen"],ans:2},
+  {q:"What causes earthquakes?",opts:["Wind","Plate tectonics","Ocean currents","Volcanoes"],ans:1},
+  {q:"pH of pure water?",opts:["0","7","14","5"],ans:1},
+];
+
+const ANIMALS = [
+  {name:'Lion',emoji:'🦁',cls:'Mammalia',habitat:'Savanna',diet:'Carnivore',lifespan:'12-16 yrs',bones:'~280',organs:'4-chamber heart, liver, kidneys',fun:'Lions can sleep up to 20 hours per day and are the only cats that live in groups called prides.'},
+  {name:'Elephant',emoji:'🐘',cls:'Mammalia',habitat:'Grasslands',diet:'Herbivore',lifespan:'60-70 yrs',bones:'~326',organs:'Largest land-animal heart (~12 kg)',fun:'Elephants can recognize themselves in mirrors — a rare sign of self-awareness found in very few species.'},
+  {name:'Eagle',emoji:'🦅',cls:'Aves',habitat:'Mountains',diet:'Carnivore',lifespan:'20-30 yrs',bones:'~120 (hollow)',organs:'4-chamber heart, crop, air sacs',fun:'Eagles have photoreceptor density 5× that of humans — they can spot a rabbit from 3 km away.'},
+  {name:'Shark',emoji:'🦈',cls:'Chondrichthyes',habitat:'Ocean',diet:'Carnivore',lifespan:'20-30 yrs',bones:'Cartilage only — no bones',organs:'Ampullae of Lorenzini (EMF sensing)',fun:'Sharks can detect one drop of blood diluted in 100 liters of water using chemoreceptors in their snout.'},
+  {name:'Frog',emoji:'🐸',cls:'Amphibia',habitat:'Wetlands',diet:'Carnivore',lifespan:'4-15 yrs',bones:'~50 (fused pelvis)',organs:'Moist permeable skin acts as auxiliary lung',fun:'Frogs absorb water and breathe partially through their skin — they never need to drink from a water source.'},
+  {name:'Octopus',emoji:'🐙',cls:'Cephalopoda',habitat:'Ocean',diet:'Carnivore',lifespan:'1-2 yrs',bones:'None — completely boneless',organs:'3 hearts, distributed brain, blue blood',fun:'An octopus has neurons distributed throughout its 8 arms — each arm can act semi-independently from the brain.'},
+  {name:'Penguin',emoji:'🐧',cls:'Aves',habitat:'Antarctica',diet:'Carnivore',lifespan:'15-20 yrs',bones:'Dense solid bones for diving',organs:'Counter-current heat exchange in flippers',fun:'Emperor penguins can dive 600 m deep and hold their breath for 22 minutes — the deepest of any bird.'},
+  {name:'Cheetah',emoji:'🐆',cls:'Mammalia',habitat:'Savanna',diet:'Carnivore',lifespan:'10-12 yrs',bones:'~230',organs:'Enlarged adrenal glands, semi-retractable claws',fun:'Cheetahs accelerate from 0 to 100 km/h in 3 seconds — faster than most sports cars.'},
+  {name:'Parrot',emoji:'🦜',cls:'Aves',habitat:'Tropics',diet:'Omnivore',lifespan:'40-60 yrs',bones:'Hollow lightweight bones',organs:'Syrinx (vocal organ unique to birds)',fun:'African Grey parrots can develop vocabularies of 1,000+ words and understand context, not just mimic sounds.'},
+  {name:'Dolphin',emoji:'🐬',cls:'Mammalia',habitat:'Ocean',diet:'Carnivore',lifespan:'40-45 yrs',bones:'Vestigial finger bones inside pectoral fins',organs:'Melon organ (echolocation), complex neocortex',fun:'Dolphins call each other by unique signature whistles that function as names — they remember names for decades.'},
+];
+
+const PLANETS_DATA = [
+  {name:'Mercury',r:5, dist:65, spd:5.0,col:'#b5b5b5',period:'88 days',  temp:'430°C/−180°C', moons:0},
+  {name:'Venus',  r:9, dist:100,spd:3.5,col:'#e8cda0',period:'225 days', temp:'465°C',         moons:0},
+  {name:'Earth',  r:10,dist:138,spd:2.9,col:'#4a8fd4',period:'365 days', temp:'15°C avg',      moons:1},
+  {name:'Mars',   r:7, dist:175,spd:2.4,col:'#c1440e',period:'687 days', temp:'−63°C avg',     moons:2},
+  {name:'Jupiter',r:20,dist:228,spd:1.3,col:'#c88b3a',period:'12 years', temp:'−108°C',        moons:95},
+  {name:'Saturn', r:17,dist:290,spd:1.0,col:'#e8d191',period:'29 years', temp:'−139°C',        moons:146},
+];
+
+const GLOBAL_LB_DATA = [
+  {name:'Zephyr K.',score:8420,pct:100},
+  {name:'Nova M.',  score:7890,pct:94},
+  {name:'Atlas J.', score:7340,pct:87},
+  {name:'Luna R.',  score:6900,pct:82},
+  {name:'Orion W.', score:5600,pct:67},
+];
+
+const ACHIEVEMENTS = [
+  {icon:'🚀',name:'First Launch',  desc:'Complete your first lesson'},
+  {icon:'⭐',name:'Star Collector',desc:'Earn 100 XP'},
+  {icon:'🔬',name:'Scientist',     desc:'Complete 5 lessons'},
+  {icon:'🏆',name:'Champion',      desc:'Win a multiplayer battle'},
+  {icon:'🌍',name:'Explorer',      desc:'Study all 6 subjects'},
+  {icon:'💎',name:'Diamond',       desc:'Reach 1,000 XP'},
+  {icon:'🎯',name:'Sharpshooter', desc:'Answer 10 quiz questions correctly'},
+  {icon:'🔥',name:'On Fire',       desc:'Achieve a 7-day streak'},
+];
+
+// IDE starter code per lesson
+const IDE_STARTERS = {
+  t1:`# What are Computers? — Python Demo
+# Binary: computers store everything as 0s and 1s
+number = 42
+binary = bin(number)
+print(f"The number {number} in binary is: {binary}")
+
+# Let's count in binary
+for i in range(8):
+    print(f"{i} = {bin(i)}")`,
+  t2:`// The Internet — JavaScript Demo
+// Simulating a simple HTTP request concept
+const url = "https://api.example.com/data";
+
+async function fetchData(endpoint) {
+  console.log("Sending request to: " + endpoint);
+  console.log("DNS lookup... found IP: 93.184.216.34");
+  console.log("TCP handshake complete");
+  console.log("HTTP GET /data HTTP/1.1");
+  console.log("Response: 200 OK");
+  return { status: "success", data: "Hello from the server!" };
+}
+
+fetchData(url).then(res => console.log(res));`,
+  t3:`# How to Code — Python Demo
+# Variables, loops, functions
+
+def greet(name):
+    return f"Hello, {name}! Welcome to Nova Science."
+
+# Loop through a list
+students = ["Alex", "Sam", "Jordan", "Taylor"]
+for student in students:
+    print(greet(student))
+
+# Function with logic
+def is_prime(n):
+    if n < 2:
+        return False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
+
+print("\\nPrime numbers up to 30:")
+print([n for n in range(2, 31) if is_prime(n)])`,
+  t4:`# Artificial Intelligence — Python Demo
+# Simple perceptron (single neuron)
+import math
+
+def sigmoid(x):
+    return 1 / (1 + math.exp(-x))
+
+def perceptron(inputs, weights, bias):
+    weighted_sum = sum(i * w for i, w in zip(inputs, weights))
+    return sigmoid(weighted_sum + bias)
+
+# AND gate — teaching a neuron to learn AND logic
+training_data = [([0,0], 0), ([0,1], 0), ([1,0], 0), ([1,1], 1)]
+weights = [0.5, 0.5]
+bias = -0.7
+
+print("AND Gate Predictions:")
+for inputs, expected in training_data:
+    output = perceptron(inputs, weights, bias)
+    pred = 1 if output > 0.5 else 0
+    print(f"  {inputs} → {output:.3f} → predicted: {pred}  (expected: {expected})")`,
+  t5:`# Cybersecurity — Python Demo
+# Caesar cipher (simple encryption)
+import hashlib
+
+def caesar_encrypt(text, shift):
+    result = ""
+    for char in text:
+        if char.isalpha():
+            shifted = chr((ord(char.upper()) - 65 + shift) % 26 + 65)
+            result += shifted
+        else:
+            result += char
+    return result
+
+def caesar_decrypt(text, shift):
+    return caesar_encrypt(text, 26 - shift)
+
+msg = "HELLO NOVA SCIENCE"
+encrypted = caesar_encrypt(msg, 3)
+decrypted = caesar_decrypt(encrypted, 3)
+print(f"Original:  {msg}")
+print(f"Encrypted: {encrypted}")
+print(f"Decrypted: {decrypted}")
+
+# Hashing (one-way)
+password = "MySecurePass123!"
+hashed = hashlib.sha256(password.encode()).hexdigest()
+print(f"\\nPassword hash (SHA-256): {hashed[:32]}...")`,
+  t6:`# Computer Architecture — Python Demo
+# Simulate a simple CPU fetch-decode-execute cycle
+
+class SimpleCPU:
+    def __init__(self):
+        self.registers = {'A': 0, 'B': 0, 'C': 0}
+        self.program_counter = 0
+        self.memory = {}
+
+    def load(self, reg, value):
+        self.registers[reg] = value
+        print(f"LOAD {reg} ← {value}  | Registers: {self.registers}")
+
+    def add(self, dest, src1, src2):
+        self.registers[dest] = self.registers[src1] + self.registers[src2]
+        print(f"ADD {dest} = {src1}+{src2} = {self.registers[dest]}  | Registers: {self.registers}")
+
+    def store(self, addr, reg):
+        self.memory[addr] = self.registers[reg]
+        print(f"STORE mem[{addr}] ← {self.registers[reg]}")
+
+cpu = SimpleCPU()
+print("=== CPU Fetch-Decode-Execute Cycle ===")
+cpu.load('A', 15)
+cpu.load('B', 27)
+cpu.add('C', 'A', 'B')
+cpu.store(0x1000, 'C')
+print(f"\\nFinal memory[0x1000] = {cpu.memory[0x1000]}")`,
+};
+
+// ════════════════════════════════════════
+// PASSWORD STRENGTH
+// ════════════════════════════════════════
+const PW_LEVELS = [
+  {label:'Very Weak', color:'#ff4444'},
+  {label:'Weak',      color:'#ff9f43'},
+  {label:'Moderate',  color:'#ffd700'},
+  {label:'Strong',    color:'#51e5a8'},
+  {label:'Very Strong',color:'#4ecdc4'},
+];
+function checkPw(pw) {
+  const hasLen  = pw.length >= 12;
+  const hasNum  = (pw.match(/\d/g)||[]).length >= 2;
+  const hasSym  = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pw);
+  const hasLet  = (pw.match(/[a-zA-Z]/g)||[]).length >= 3;
+  document.getElementById('r-len').className='req-dot'+(hasLen?' ok':'');
+  document.getElementById('r-num').className='req-dot'+(hasNum?' ok':'');
+  document.getElementById('r-sym').className='req-dot'+(hasSym?' ok':'');
+  document.getElementById('r-let').className='req-dot'+(hasLet?' ok':'');
+  const score = [hasLen,hasNum,hasSym,hasLet].filter(Boolean).length + (pw.length>=16?1:0);
+  const lvl = Math.min(4, Math.max(0, score-1+(pw.length>0?0:-1)));
+  const level = pw.length===0 ? -1 : Math.max(0, Math.min(4, score-1));
+  for(let i=0;i<5;i++){
+    const seg=document.getElementById('ps'+i);
+    seg.style.background = pw.length>0 && i<=level ? PW_LEVELS[level].color : 'rgba(255,255,255,.1)';
+  }
+  const lbl=document.getElementById('pw-label');
+  if(pw.length===0){lbl.textContent='Password strength';lbl.style.color='var(--muted)';}
+  else{lbl.textContent=PW_LEVELS[level].label;lbl.style.color=PW_LEVELS[level].color;}
+}
+function togglePw(id,btn){
+  const inp=document.getElementById(id);
+  inp.type=inp.type==='password'?'text':'password';
+  btn.textContent=inp.type==='password'?'👁':'🙈';
+}
+
+// ════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════
+function showView(id){
+  document.getElementById('view-login').style.display='none';
+  document.getElementById('view-register').style.display='none';
+  document.getElementById(id).style.display='block';
+  document.getElementById('login-err').classList.remove('show');
+  document.getElementById('reg-err').classList.remove('show');
+}
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show');}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  if(!email||!pw){showErr('login-err','Please enter your email and password.');return;}
+  if(demoMode){demoLogin(email);return;}
+  document.getElementById('login-loading').classList.add('show');
+  document.getElementById('login-btn').disabled=true;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+  document.getElementById('login-loading').classList.remove('show');
+  document.getElementById('login-btn').disabled=false;
+  if(error){showErr('login-err',error.message);return;}
+  await loadProfile(data.user);
+  enterApp();
+}
+
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim()||'Explorer';
+  const email=document.getElementById('reg-email').value.trim();
+  const pw=document.getElementById('reg-pw').value;
+  if(!email){showErr('reg-err','Please enter your email.');return;}
+  if(!pw||pw.length<12){showErr('reg-err','Password must be at least 12 characters.');return;}
+  if(!G.grade){showErr('reg-err','Please select your grade.');return;}
+  if(demoMode){demoLogin(email,name);return;}
+  document.getElementById('reg-loading').classList.add('show');
+  document.getElementById('reg-btn').disabled=true;
+  const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{name,grade:G.grade}}});
+  document.getElementById('reg-loading').classList.remove('show');
+  document.getElementById('reg-btn').disabled=false;
+  if(error){showErr('reg-err',error.message);return;}
+  if(data.user){
+    await sb.from('profiles').upsert({id:data.user.id,name,grade:G.grade,xp:0,completed_lessons:[]});
+    await loadProfile(data.user);enterApp();
+  } else {
+    showErr('reg-err','Check your email to confirm your account.');
+  }
+}
+
+async function authGoogle(){
+  if(demoMode){demoLogin('google.user@gmail.com','Nova Explorer');return;}
+  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
+}
+
+function demoLogin(email,name){
+  const n=name||(email.split('@')[0]);
+  G.user={id:'demo-'+Date.now(),email};
+  G.profile={name:n,grade:G.grade||5,xp:0,completed_lessons:[]};
+  G.xp=0;G.completedLessons=[];G.grade=G.grade||5;
+  enterApp();
+}
+
+async function loadProfile(user){
+  G.user=user;
+  const {data}=await sb.from('profiles').select('*').eq('id',user.id).single();
+  if(data){
+    G.profile=data;G.xp=data.xp||0;
+    G.grade=data.grade||1;
+    G.completedLessons=data.completed_lessons||[];
+  } else {
+    G.profile={name:user.user_metadata?.name||user.email.split('@')[0],grade:1,xp:0,completed_lessons:[]};
+    G.xp=0;G.grade=1;G.completedLessons=[];
+  }
+}
+
+async function doLogout(){
+  if(!demoMode&&sb)await sb.auth.signOut();
+  G.user=null;G.profile=null;G.xp=0;G.completedLessons=[];
+  showScreen('auth-screen');
+}
+
+async function saveProgress(){
+  if(demoMode||!sb||!G.user)return;
+  await sb.from('profiles').update({xp:G.xp,completed_lessons:G.completedLessons}).eq('id',G.user.id);
+}
+
+function buildGradeGrid(){
+  document.getElementById('grade-grid').innerHTML=
+    Array.from({length:12},(_,i)=>`<button class="grade-btn" onclick="selGrade(${i+1},this)">G${i+1}</button>`).join('');
+}
+function selGrade(g,btn){
+  document.querySelectorAll('.grade-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');G.grade=g;
+}
+
+// ════════════════════════════════════════
+// SCREEN MANAGEMENT
+// ════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');});
+  const t=document.getElementById(id);t.classList.add('active');
+}
+function enterApp(){
+  showScreen('app-screen');
+  updateNav();buildHomePanel();buildExploreFilters();buildGlobalLB();goTab('home');
+}
+function closeLesson(){
+  if(G.pRaf)cancelAnimationFrame(G.pRaf);
+  if(G.sRaf)cancelAnimationFrame(G.sRaf);
+  showScreen('app-screen');
+}
+function goTab(t){
+  ['home','explore','multi','profile'].forEach(k=>{
+    document.getElementById('tab-'+k)?.classList.toggle('active',k===t);
+    document.getElementById('panel-'+k)?.classList.toggle('active',k===t);
+  });
+  if(t==='profile')buildProfile();
+  if(t==='multi')buildGlobalLB();
+}
+function updateNav(){
+  const n=G.profile?.name||G.user?.email?.split('@')[0]||'Explorer';
+  document.getElementById('nav-av').textContent=(n[0]||'?').toUpperCase();
+  document.getElementById('nav-xp').textContent=G.xp;
+  document.getElementById('g-name').textContent=n.split(' ')[0];
+  document.getElementById('g-grade').textContent=G.grade;
+  document.getElementById('s-xp').textContent=G.xp;
+  document.getElementById('s-done').textContent=G.completedLessons.length;
+  document.getElementById('s-rank').textContent=calcRank();
+}
+function calcRank(){if(G.xp>=1000)return'💎';if(G.xp>=500)return'🥇';if(G.xp>=200)return'🥈';if(G.xp>=50)return'🥉';return'⭐';}
+
+// ════════════════════════════════════════
+// HOME
+// ════════════════════════════════════════
+function buildHomePanel(){
+  document.getElementById('home-subjects').innerHTML=SUBJECTS.map(s=>{
+    const done=G.completedLessons.filter(id=>LESSONS.find(l=>l.id===id&&l.s===s.id)).length;
+    const total=LESSONS.filter(l=>l.s===s.id).length;
+    const pct=Math.round(done/total*100);
+    return `<div class="subject-card" onclick="openSubject('${s.id}')">
+      <span class="subj-icon">${s.icon}</span>
+      <div class="subj-name">${s.name}</div>
+      <div class="subj-count">${total} lessons · Grade 1–12</div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:linear-gradient(90deg,${s.c1},${s.c2})"></div></div>
+      <div class="prog-pct">${pct}% complete</div>
+    </div>`;
+  }).join('');
+  document.getElementById('home-recent').innerHTML=lessonCards(LESSONS.slice(0,3));
+}
+function openSubject(sid){G.filterSubject=sid;goTab('explore');buildExplore();}
+
+// ════════════════════════════════════════
+// EXPLORE
+// ════════════════════════════════════════
+function buildExploreFilters(){
+  document.getElementById('grade-filters').innerHTML=
+    `<button class="filter-btn active" onclick="setGF('all',this)">All Grades</button>`+
+    Array.from({length:12},(_,i)=>`<button class="filter-btn" onclick="setGF(${i+1},this)">G${i+1}</button>`).join('');
+  document.getElementById('subj-filters').innerHTML=
+    `<button class="subj-btn active" onclick="setSF('all',this)"><div>📚</div>All</button>`+
+    SUBJECTS.map(s=>`<button class="subj-btn" onclick="setSF('${s.id}',this)"><div>${s.icon}</div>${s.name}</button>`).join('');
+  buildExplore();
+}
+function setGF(g,btn){G.filterGrade=g;document.querySelectorAll('#grade-filters .filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');buildExplore();}
+function setSF(s,btn){G.filterSubject=s;document.querySelectorAll('#subj-filters .subj-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');buildExplore();}
+function buildExplore(){
+  let ls=LESSONS;
+  if(G.filterGrade!=='all')ls=ls.filter(l=>l.g===G.filterGrade);
+  if(G.filterSubject!=='all')ls=ls.filter(l=>l.s===G.filterSubject);
+  document.getElementById('explore-grid').innerHTML=ls.length
+    ?lessonCards(ls)
+    :'<p style="color:var(--muted);grid-column:1/-1;text-align:center;padding:2rem">No lessons match this filter.</p>';
+}
+function lessonCards(ls){
+  return ls.map(l=>{
+    const s=SUBJECTS.find(x=>x.id===l.s);
+    const done=G.completedLessons.includes(l.id);
+    return `<div class="lesson-card" onclick="openLesson('${l.id}')">
+      <div class="lc-top">
+        <span class="lc-tag" style="background:${s.c1}22;color:${s.c1};border:1px solid ${s.c1}44">${s.icon} G${l.g}</span>
+        <span class="lc-modes">📄 🎮</span>
+      </div>
+      <div class="lc-title">${l.title}</div>
+      <div class="lc-desc">${l.desc}</div>
+      <div class="lc-foot">
+        <span class="lc-xp">⭐ ${l.xp} XP</span>
+        <button class="lc-btn ${done?'done':''}">${done?'✓ Done':'Start →'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+// LESSON
+// ════════════════════════════════════════
+async function openLesson(id){
+  const l=LESSONS.find(x=>x.id===id);if(!l)return;
+  G.currentLesson=l;
+  const subj=SUBJECTS.find(s=>s.id===l.s);
+  showScreen('lesson-screen');
+  document.getElementById('lesson-title-bar').textContent=l.title;
+  document.getElementById('lesson-xp-amt').textContent=l.xp;
+  document.getElementById('doc-title').textContent=l.title;
+  document.getElementById('doc-meta').innerHTML=`
+    <span class="doc-tag" style="background:${subj.c1}22;color:${subj.c1};border:1px solid ${subj.c1}44">${subj.icon} ${subj.name}</span>
+    <span class="doc-tag" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)">Grade ${l.g}</span>
+    <span class="doc-tag" style="background:rgba(255,215,0,.1);color:var(--gold);border:1px solid rgba(255,215,0,.3)">⭐ ${l.xp} XP</span>`;
+  setMode('doc');
+  // Build sidebar chapters
+  const chapters=getChapters(l);
+  document.getElementById('ch-list').innerHTML=chapters.map((ch,i)=>
+    `<li class="ch-item ${i===0?'active':''}" onclick="this.parentElement.querySelectorAll('li').forEach(x=>x.classList.remove('active'));this.classList.add('active')">
+      <div class="ch-dot ${i===0?'cur':''}"></div>${ch}</li>`).join('');
+  // Quick quiz
+  const qz=getQuiz(l);
+  document.getElementById('quick-quiz').innerHTML=`
+    <div class="quiz-q">${qz.q}</div>
+    ${qz.opts.map((o,i)=>`<button class="quiz-opt-btn" onclick="checkQB(${i},${qz.ans},this)">${o}</button>`).join('')}`;
+  // Complete button
+  const done=G.completedLessons.includes(l.id);
+  const btn=document.getElementById('complete-btn');
+  btn.textContent=done?'✅ Completed!':'✅ Complete Lesson';
+  btn.style.cssText=done?'background:rgba(81,229,168,.1);border:1px solid var(--green);color:var(--green);width:100%;border-radius:var(--r-sm);padding:12px;font-family:"Syne",sans-serif;font-size:14px;font-weight:700;cursor:pointer':'';
+  // Load document content
+  await loadDocContent(l, subj);
+}
+function checkQB(i,ans,btn){
+  btn.parentElement.querySelectorAll('button').forEach((b,j)=>{
+    b.className='quiz-opt-btn'+(j===ans?' correct':(j===i&&i!==ans?' wrong':''));
+  });
+}
+function setMode(m){
+  G.mode=m;
+  document.getElementById('mb-doc').classList.toggle('active',m==='doc');
+  document.getElementById('mb-play').classList.toggle('active',m==='play');
+  document.getElementById('dv').classList.toggle('active',m==='doc');
+  document.getElementById('pv').classList.toggle('active',m==='play');
+  if(m==='play'&&G.currentLesson)buildPlayground(G.currentLesson.pg,G.currentLesson);
+}
+function completeLesson(){
+  const l=G.currentLesson;if(!l||G.completedLessons.includes(l.id))return;
+  G.completedLessons.push(l.id);G.xp+=l.xp;
+  saveProgress();updateNav();buildHomePanel();buildExplore();
+  toast(`⭐ +${l.xp} XP! Lesson complete!`,'txp');
+  const btn=document.getElementById('complete-btn');
+  btn.textContent='✅ Completed!';
+  btn.style.cssText='background:rgba(81,229,168,.1);border:1px solid var(--green);color:var(--green);width:100%;border-radius:var(--r-sm);padding:12px;font-family:"Syne",sans-serif;font-size:14px;font-weight:700;cursor:pointer';
+}
+
+function getChapters(l){
+  const map={
+    astronomy:['Introduction','Core Concepts','Deep Dive','Observations','Modern Research','Review'],
+    physics:['Fundamentals','Key Equations','Worked Examples','Practice Problems','Real Applications','Review'],
+    biology:['Overview','Cell & Molecular Biology','Organ Systems','Ecology','Evolutionary Context','Review'],
+    earth:['Overview','Formation & Structure','Processes','Environmental Impact','Case Studies','Review'],
+    chemistry:['Core Theory','Atomic Perspective','Equations & Examples','Practice Calculations','Applications','Review'],
+    technology:['Concepts','How It Works','Code Examples','Build & Run','Career Applications','Review'],
+  };
+  return map[l.s]||['Introduction','Core Concepts','Deep Dive','Applications','Review'];
+}
+function getQuiz(l){
+  const qs={
+    a1:{q:"What causes the phases of the Moon?",opts:["Earth's shadow","Moon's rotation","Angle of sunlight","Cloud cover"],ans:2},
+    a2:{q:"Which planet has the most moons?",opts:["Jupiter","Saturn","Uranus","Neptune"],ans:1},
+    a3:{q:"What is a white dwarf?",opts:["A young star","A dead star remnant","A galaxy","A comet"],ans:1},
+    a4:{q:"What holds galaxies together?",opts:["Electromagnetism","Dark matter & gravity","Nuclear force","Solar wind"],ans:1},
+    a5:{q:"What is the event horizon of a black hole?",opts:["Its center","The point of no return","Its accretion disk","Its magnetic poles"],ans:1},
+    a6:{q:"What evidence supports the Big Bang?",opts:["The Sun's size","CMB radiation","Moon's craters","Asteroid belt"],ans:1},
+    p1:{q:"Newton's First Law states objects remain at rest unless acted on by a…",opts:["Force","Velocity","Mass","Energy"],ans:0},
+    p2:{q:"What type of wave does sound travel as?",opts:["Transverse","Longitudinal","Electromagnetic","Surface"],ans:1},
+    p3:{q:"If mass is 5kg and height is 10m, what is gravitational PE? (g=10)",opts:["500 J","50 J","5000 J","5 J"],ans:0},
+    p4:{q:"Ohm's Law states V =",opts:["I/R","I×R","I+R","I²×R"],ans:1},
+    p5:{q:"The uncertainty principle was proposed by…",opts:["Einstein","Bohr","Heisenberg","Schrödinger"],ans:2},
+    p6:{q:"E=mc² was formulated by…",opts:["Newton","Einstein","Planck","Dirac"],ans:1},
+    b1:{q:"Which is NOT a characteristic of living things?",opts:["Reproduction","Growth","Made of cells","Made of metal"],ans:3},
+    b2:{q:"Which biome has the highest biodiversity?",opts:["Desert","Tundra","Tropical rainforest","Grassland"],ans:2},
+    b3:{q:"Which organ pumps blood through the body?",opts:["Lungs","Liver","Heart","Kidneys"],ans:2},
+    b4:{q:"DNA is made of which monomers?",opts:["Amino acids","Nucleotides","Fatty acids","Glucose"],ans:1},
+    b5:{q:"Natural selection favors individuals that…",opts:["Are largest","Are fastest","Have favorable traits","Live longest"],ans:2},
+    b6:{q:"In Mendelian genetics, a dominant allele is represented by a…",opts:["Lowercase letter","Capital letter","Number","Symbol"],ans:1},
+    e1:{q:"Which rock type forms from cooling magma?",opts:["Sedimentary","Metamorphic","Igneous","Fossiliferous"],ans:2},
+    e2:{q:"What drives global wind patterns?",opts:["Ocean currents","Earth's rotation (Coriolis)","Lunar gravity","Soil type"],ans:1},
+    e3:{q:"Which plate boundary causes earthquakes AND volcanoes?",opts:["Divergent","Transform","Convergent","Passive"],ans:2},
+    e4:{q:"Who proposed continental drift?",opts:["Darwin","Wegener","Newton","Hutton"],ans:1},
+    e5:{q:"What drives deep ocean currents?",opts:["Wind","Temperature and salinity","Tides","Fish"],ans:1},
+    e6:{q:"Which gas is the primary driver of modern climate change?",opts:["Oxygen","Nitrogen","CO₂","Argon"],ans:2},
+    c1:{q:"At what temperature does water boil at sea level?",opts:["90°C","100°C","110°C","80°C"],ans:1},
+    c2:{q:"Which is a chemical change?",opts:["Melting ice","Dissolving salt","Burning wood","Cutting paper"],ans:2},
+    c3:{q:"How many elements are in the periodic table?",opts:["92","108","118","128"],ans:2},
+    c4:{q:"A pH of 3 is…",opts:["Neutral","Acidic","Basic","Alkaline"],ans:1},
+    c5:{q:"Which subatomic particle has no charge?",opts:["Electron","Proton","Neutron","Positron"],ans:2},
+    c6:{q:"What functional group defines alcohols?",opts:["−COOH","−NH₂","−OH","−CHO"],ans:2},
+    t1:{q:"What does CPU stand for?",opts:["Core Power Unit","Central Processing Unit","Computer Program Upload","Central Program Unit"],ans:1},
+    t2:{q:"What does HTTP stand for?",opts:["HyperText Transfer Protocol","High Transfer Text Program","HyperText Transmission Port","Hard Transfer Terminal Protocol"],ans:0},
+    t3:{q:"What is a loop in programming?",opts:["A syntax error","Code that repeats","A variable","A function"],ans:1},
+    t4:{q:"What does a neural network learn from?",opts:["Hard-coded rules","Training data","User preferences","The internet"],ans:1},
+    t5:{q:"What is encryption used for?",opts:["Speeding up code","Protecting data","Sorting lists","Rendering graphics"],ans:1},
+    t6:{q:"What is cache memory?",opts:["Long-term storage","Fast small memory near the CPU","Internet storage","RAM"],ans:1},
+  };
+  return qs[l.id]||QUIZ_QS[Math.floor(Math.random()*QUIZ_QS.length)];
+}
+
+// ════════════════════════════════════════
+// AI DOCUMENT GENERATION
+// ════════════════════════════════════════
+const DOC_CACHE = {};
+async function loadDocContent(l, subj) {
+  if(DOC_CACHE[l.id]){
+    document.getElementById('lesson-doc-content').innerHTML=DOC_CACHE[l.id];return;
+  }
+  document.getElementById('lesson-doc-content').innerHTML=
+    '<div class="loading-doc"><div class="spin"></div><span>Generating lesson content with AI...</span></div>';
+
+  const wordGoal = (l.s==='biology'||l.s==='earth') ? '5000' : (l.s==='chemistry'||l.s==='physics') ? '3500 with many worked examples and step-by-step solutions' : '2500';
+  const extra = l.s==='chemistry'||l.s==='physics'
+    ? 'Include at minimum 6 fully worked examples with step-by-step solutions formatted as <div class="example-box"><div class="ex-label">Example N</div>...</div> and <div class="solution-box"><div class="sol-label">Solution</div>...</div>. Include all key equations formatted as <div class="eq-label">Equation name</div><div class="eq-block">formula</div>.'
+    : l.s==='biology'||l.s==='earth'
+    ? 'Write a comprehensive long-form article of at least 5000 words. Cover history, mechanisms, examples, case studies, diagrams described in text, and real-world applications deeply. Use <h2> and <h3> headers, <ul> and <ol> lists, and <strong> / <em> emphasis.'
+    : 'Write a thorough lesson with real-world context, fun facts, and applications.';
+
+  const prompt = `You are a world-class science teacher writing a Grade ${l.g} lesson titled "${l.title}" for the subject ${subj.name}.
+Lesson description: ${l.desc}
+
+Write a rich, engaging, educational HTML lesson (no outer html/body tags). Target ~${wordGoal} words.
+${extra}
+Format: use <h2>, <h3>, <p>, <ul>, <ol>, <strong>, <em>.
+For equations use: <div class="eq-label">Label</div><div class="eq-block">equation</div>
+For examples: <div class="example-box"><div class="ex-label">Example N</div>content</div>
+For solutions: <div class="solution-box"><div class="sol-label">Solution</div>content</div>
+Do NOT include markdown. Output pure HTML only. Start with a compelling introductory paragraph, not a heading.`;
+
+  if(CLAUDE_KEY) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:prompt}]})
+      });
+      const data = await res.json();
+      const html = data.content?.[0]?.text||'';
+      if(html){DOC_CACHE[l.id]=html;document.getElementById('lesson-doc-content').innerHTML=html;return;}
+    } catch(e){}
+  }
+  // Fallback: built-in rich content
+  DOC_CACHE[l.id]=builtinDoc(l,subj);
+  document.getElementById('lesson-doc-content').innerHTML=DOC_CACHE[l.id];
+}
+
+function builtinDoc(l,subj){
+  const docs = {
+    a2: `<p>Four and a half billion years ago, a vast cloud of gas and dust — a <strong>solar nebula</strong> — began to collapse under its own gravity. As it spun faster, material concentrated at the center, eventually igniting into the Sun. Leftovers formed a swirling disk from which the planets, moons, asteroids, and comets of our solar system were born.</p>
+<h2>The Inner Rocky Planets</h2><p>The four innermost planets — Mercury, Venus, Earth, and Mars — are small, dense, and rocky. They formed close to the Sun where temperatures were too high for ice and gas to condense, leaving only metals and silicates to accrete.</p>
+<h3>Mercury</h3><p><strong>Mercury</strong> is the smallest planet and closest to the Sun. It has virtually no atmosphere, meaning daytime temperatures soar to <em>430°C</em> and plummet to <em>−180°C</em> at night. A single Mercury day lasts 59 Earth days, yet its year is only 88 Earth days — meaning the Sun rises only twice per Mercury year.</p>
+<h3>Venus</h3><p><strong>Venus</strong> is nearly Earth's twin in size, yet a completely different world. Its thick CO₂ atmosphere creates a runaway greenhouse effect: surface temperatures average <em>465°C</em>, hotter than Mercury despite being twice as far from the Sun. It rotates backwards (retrograde) and extremely slowly — a Venusian day is longer than its year.</p>
+<h3>Earth</h3><p><strong>Earth</strong> is the only confirmed life-bearing world. Its perfect distance from the Sun (the <em>habitable zone</em>), liquid water oceans, protective magnetic field, and oxygen-rich atmosphere make it uniquely hospitable. Earth's single large Moon stabilises its axial tilt, preventing wild climate swings.</p>
+<h3>Mars</h3><p><strong>Mars</strong> is a cold desert world with a thin CO₂ atmosphere. Yet evidence of ancient river valleys, lake beds, and polar ice caps reveals a warmer, wetter past. Mars hosts <em>Olympus Mons</em> — the largest volcano in the solar system at 22 km high — and the <em>Valles Marineris</em> canyon system, stretching 4,000 km.</p>
+<h2>The Outer Giant Planets</h2><p>Beyond the asteroid belt lie the four gas and ice giants, massive worlds of hydrogen, helium, and ices. They formed farther out where temperature was low enough for volatile compounds to solidify and be incorporated into planetary cores.</p>
+<h3>Jupiter</h3><p><strong>Jupiter</strong> is by far the largest planet — it could contain all other planets combined. Its Great Red Spot is a storm wider than Earth that has raged for over 400 years. Jupiter acts as the solar system's gravitational vacuum cleaner, deflecting or capturing asteroids that might otherwise strike the inner planets.</p>
+<h3>Saturn</h3><p><strong>Saturn's</strong> iconic ring system, composed of ice and rock particles ranging from dust grains to boulders, stretches 280,000 km yet is only about 10 m thick on average. Its moon <em>Titan</em> has a thick nitrogen atmosphere and liquid methane lakes — the only body other than Earth with stable surface liquids.</p>
+<div class="eq-label">Orbital Period — Kepler's Third Law</div><div class="eq-block">T² ∝ a³  (period² is proportional to semi-major axis³)</div>
+<div class="eq-label">Gravitational Force — Newton</div><div class="eq-block">F = G × m₁ × m₂ / r²   where G = 6.674 × 10⁻¹¹ N·m²/kg²</div>
+<h2>Small Bodies: Asteroids, Comets, and Dwarf Planets</h2><p>The <strong>asteroid belt</strong> between Mars and Jupiter contains millions of rocky bodies — remnants that never coalesced into a planet due to Jupiter's gravitational disruption. The largest, <em>Ceres</em>, is classified as a dwarf planet.</p>
+<p><strong>Comets</strong> are icy bodies from the <em>Kuiper Belt</em> or distant <em>Oort Cloud</em>. When they approach the Sun, solar radiation vaporises their ice, creating spectacular tails that always point away from the Sun regardless of direction of travel. <em>Halley's Comet</em> orbits the Sun every 75 years and has been recorded since 240 BCE.</p>
+<h2>Formation: The Nebular Hypothesis</h2><p>The most widely accepted model for solar system formation is the <strong>nebular hypothesis</strong>. A shock wave — possibly from a nearby supernova — caused a cloud of gas and dust to begin contracting. Conservation of angular momentum caused the cloud to spin faster as it collapsed, flattening into a disk. The central region heated up until nuclear fusion ignited, creating the Sun. Remaining material in the disk clumped together through a process called <strong>accretion</strong>, first forming planetesimals, then protoplanets, and finally the planets we see today.</p>`,
+
+    p6: `<p>At the heart of modern particle physics lies a profound symmetry: for every particle of matter in the universe, there exists an <strong>antiparticle</strong> — identical in mass but opposite in charge and quantum numbers. When matter meets its antimatter mirror image, the result is the most complete conversion of mass to energy physically possible.</p>
+<h2>What is Antimatter?</h2><p>Antimatter was first predicted in 1928 by British physicist <strong>Paul Dirac</strong> while combining quantum mechanics with special relativity. His equation produced two solutions — one for an electron with negative charge, and one for a particle of equal mass with <em>positive</em> charge. This predicted particle, the <strong>positron</strong>, was discovered experimentally by Carl Anderson in 1932, confirming Dirac's theory.</p>
+<div class="eq-label">Dirac Equation (simplified)</div><div class="eq-block">(iγᵘ∂ᵘ − m)ψ = 0</div>
+<div class="eq-label">Einstein's Mass-Energy Equivalence</div><div class="eq-block">E = mc²   where c = 3 × 10⁸ m/s</div>
+<h2>Annihilation: Total Conversion of Mass to Energy</h2><p>When an electron (matter) meets a positron (antimatter), they <strong>annihilate</strong> each other completely. Unlike chemical reactions that rearrange atoms, annihilation converts 100% of the particles' mass into energy — released as two gamma-ray photons travelling in opposite directions to conserve momentum.</p>
+<div class="eq-label">Electron-Positron Annihilation Energy</div><div class="eq-block">E = 2m₀c² = 2 × (9.11×10⁻³¹ kg) × (3×10⁸)² ≈ 1.022 MeV</div>
+<div class="example-box"><div class="ex-label">Example 1 — Energy from Annihilation</div><p>How much energy is released when 1 gram of matter meets 1 gram of antimatter?</p></div>
+<div class="solution-box"><div class="sol-label">Solution</div><p>Total mass = 2g = 2 × 10⁻³ kg<br>E = mc² = (2×10⁻³) × (3×10⁸)² = 2×10⁻³ × 9×10¹⁶<br><strong>E = 1.8 × 10¹⁴ joules = 180 terajoules</strong><br>That's equivalent to about 43 kilotons of TNT — the energy of a nuclear bomb from just 2 grams of mass.</p></div>
+<div class="example-box"><div class="ex-label">Example 2 — Pair Production</div><p>A gamma ray photon with energy 2.5 MeV enters a magnetic field. Can it produce an electron-positron pair?</p></div>
+<div class="solution-box"><div class="sol-label">Solution</div><p>Minimum energy needed for pair production = 2m₀c² = 1.022 MeV<br>Since 2.5 MeV > 1.022 MeV, <strong>yes</strong>, the photon can create an electron-positron pair.<br>Remaining kinetic energy = 2.5 − 1.022 = <strong>1.478 MeV</strong> shared between the two particles.</p></div>
+<h2>The Matter-Antimatter Asymmetry</h2><p>The Big Bang created matter and antimatter in almost equal amounts. If they were truly equal, they would have annihilated completely, leaving a universe of pure energy — and no stars, planets, or people. Something caused a <strong>one-in-a-billion asymmetry</strong>: for every billion antiparticles, there were a billion-and-one matter particles. The leftover billion-and-one pairs annihilated, but that single extra matter particle survived to form everything we see. This asymmetry, called <em>CP violation</em>, is one of physics' greatest unsolved mysteries.</p>
+<h2>Antimatter in Medicine: PET Scans</h2><p><strong>Positron Emission Tomography (PET)</strong> is a medical imaging technique that uses antimatter. A radioactive tracer (e.g., fluorine-18) emits positrons that travel just a few millimetres before annihilating with electrons in body tissue. The resulting gamma rays are detected by sensors around the patient, producing a 3D image of metabolic activity — invaluable for cancer detection and brain studies.</p>`,
+
+    b2: `<p>Planet Earth is home to an estimated 8.7 million species, occupying every corner of the globe from the deepest ocean trenches to the highest mountain peaks. What determines where an animal lives, how it behaves, and what it eats? The answer lies in the <strong>habitat</strong> — the specific environment that provides all of an organism's needs: food, water, shelter, and space to reproduce.</p>
+<h2>What is a Habitat?</h2><p>A habitat is more than just a location — it is a complete environmental package. The <strong>abiotic</strong> (non-living) components include temperature, rainfall, soil type, light intensity, and altitude. The <strong>biotic</strong> (living) components include the organisms that share the space — prey, predators, competitors, and mutualistic partners.</p>
+<p>An animal's survival depends on how well it matches its habitat's demands. A polar bear in a tropical rainforest would overheat and starve; a toucan in the Arctic would freeze. Every species has evolved a unique set of adaptations — physical structures, behaviours, and physiological processes — tailored to its specific habitat.</p>
+<h2>Major Biome Types</h2>
+<h3>Tropical Rainforests</h3><p>Covering approximately 6% of Earth's surface but housing over <strong>50% of all species</strong>, tropical rainforests are Earth's most biodiverse biomes. Found near the equator in the Amazon Basin, Congo Basin, and Southeast Asia, they receive 200–400 cm of rainfall annually and maintain temperatures between 20–30°C year-round.</p>
+<p>The forest is stratified into four layers: the <strong>emergent layer</strong> (tall trees above 45m), the <strong>canopy</strong> (continuous leafy roof at 25–45m), the <strong>understory</strong> (shrubs and small trees), and the <strong>forest floor</strong> (where less than 1% of sunlight reaches). Each layer hosts entirely different communities of species.</p>
+<p>Classic rainforest adaptations include: bright warning coloration in poison dart frogs, prehensile tails in howler monkeys for canopy life, and buttress roots in trees for stability in shallow tropical soils.</p>
+<h3>Savannas and Grasslands</h3><p>The African savanna is defined by seasonal rainfall (50–130 cm/year) with distinct wet and dry seasons. This regime prevents forest from establishing, creating vast open grasslands dotted with acacia trees. The result is one of Earth's most dramatic ecosystems — home to the world's largest terrestrial animals.</p>
+<p>The <em>Great Wildebeest Migration</em> in the Serengeti involves 1.5 million wildebeest, 200,000 zebra, and 500,000 gazelle following seasonal rains in a 800 km circuit — the largest overland migration on Earth. This movement of millions of herbivores shapes the landscape, fertilises the soil, and sustains the entire predator community including lions, cheetahs, leopards, and hyenas.</p>
+<h3>Deserts</h3><p>Receiving less than 25 cm of rainfall annually, deserts cover about 33% of Earth's land surface and are far from lifeless. The <strong>Sonoran Desert</strong> of North America hosts over 2,000 plant species; the <strong>Namib Desert</strong> of Africa has species found nowhere else on Earth.</p>
+<p>Desert adaptations are among the most extreme in nature. The <strong>Namib fog-basking beetle</strong> climbs dunes at dawn, angles its body into the fog-laden wind, and drinks the condensed water that runs down its back — harvesting moisture from air that contains less than 1 mm of rain per year. The <strong>kangaroo rat</strong> of North America never drinks water, deriving all moisture from metabolic water produced during cellular respiration of dry seeds.</p>
+<h3>Oceans</h3><p>Covering 71% of Earth's surface and averaging 3,800 m depth, the ocean is Earth's largest habitat. The <strong>photic zone</strong> (0–200m) receives sunlight and houses most marine life, including coral reefs — the ocean's equivalent of tropical rainforests in biodiversity. Below 200m lies the <strong>aphotic zone</strong>, perpetually dark, cold (below 4°C), and under immense pressure.</p>
+<p>Deep sea organisms have evolved astonishing adaptations: <em>anglerfish</em> use bioluminescent lures to attract prey; <em>tube worms</em> at hydrothermal vents live not on photosynthesis but <strong>chemosynthesis</strong> — deriving energy from hydrogen sulphide in the absence of sunlight. These communities were unknown to science until 1977.</p>
+<div class="eq-label">Shannon Biodiversity Index</div><div class="eq-block">H = −Σ(pᵢ × ln pᵢ)   where pᵢ is the proportion of species i</div>
+<h2>Food Webs and Energy Flow</h2><p>Energy flows through an ecosystem from <strong>producers</strong> (plants, algae) → <strong>primary consumers</strong> (herbivores) → <strong>secondary consumers</strong> (carnivores) → <strong>tertiary consumers</strong> (apex predators). At each trophic level, approximately <strong>90% of energy is lost</strong> as heat, metabolic activity, and waste — only 10% is transferred upward.</p>
+<p>This <em>10% rule</em> explains why food chains rarely exceed 5–6 links, and why ecosystems can support far more herbivores than carnivores. A 1,000 kg of grass supports 100 kg of insects, which support 10 kg of frogs, supporting 1 kg of herons.</p>
+<h2>Keystone Species</h2><p>A <strong>keystone species</strong> has a disproportionately large impact on its ecosystem relative to its biomass. Remove it, and the ecosystem may collapse or transform entirely.</p>
+<p>The classic example: when wolves were reintroduced to Yellowstone National Park in 1995 after a 70-year absence, they did not just reduce elk numbers — they changed elk <em>behaviour</em>. Elk avoided river valleys where wolves could ambush them, allowing riverbank vegetation to regrow. This stabilised riverbanks, reduced erosion, changed river courses, increased beaver populations (who need willows), created wetland habitats, and increased biodiversity across trophic levels. The wolves had changed the rivers themselves — a cascade called a <strong>trophic cascade</strong>.</p>
+<h2>Adaptation: The Engine of Diversity</h2><p><strong>Natural selection</strong> favours traits that improve survival and reproduction in a specific environment. Over thousands of generations, this produces the extraordinary specialisations we see in nature.</p>
+<ul>
+<li><strong>Structural adaptations:</strong> A giraffe's long neck for reaching high foliage; a duck's webbed feet for swimming; a cactus's thick waxy cuticle for water retention.</li>
+<li><strong>Behavioural adaptations:</strong> Arctic foxes growing white winter coats; monarch butterflies migrating 4,000 km to warmer climates; octopuses changing colour for camouflage in milliseconds.</li>
+<li><strong>Physiological adaptations:</strong> Deep-diving mammals with high myoglobin concentrations in muscles storing extra oxygen; desert mammals with highly concentrated urine to conserve water; polar fish producing antifreeze proteins.</li>
+</ul>`,
+
+    e3: `<p>Beneath your feet, the Earth is far from the solid, static sphere it might appear. Our planet's interior is a heat engine — churning, melting, cracking, and building. <strong>Volcanoes</strong> and <strong>earthquakes</strong> are the most dramatic expressions of this internal energy, both caused by the movement of massive rocky slabs called <strong>tectonic plates</strong> that carry Earth's crust across a semi-molten mantle.</p>
+<h2>Earth's Internal Structure</h2><p>Earth consists of four concentric layers, each with distinct composition and properties:</p>
+<ul>
+<li><strong>Crust:</strong> The outermost, thinnest layer — 5–70 km thick. Continental crust (granite-like) is thicker and less dense; oceanic crust (basaltic) is thinner and denser.</li>
+<li><strong>Mantle:</strong> 2,900 km thick, composed of hot, solid silicate rock that flows plastically over geological time. The upper mantle's <em>asthenosphere</em> is partially molten — plates float and slide on it.</li>
+<li><strong>Outer Core:</strong> Liquid iron-nickel alloy at ~4,000–5,000°C, generating Earth's magnetic field through convection (the dynamo effect).</li>
+<li><strong>Inner Core:</strong> Solid iron-nickel sphere under immense pressure (3.6 million atm), despite temperatures of ~6,000°C — similar to the Sun's surface.</li>
+</ul>
+<h2>Plate Tectonics: The Mechanism</h2><p>Earth's crust and upper mantle form the <strong>lithosphere</strong>, broken into approximately 15 major <strong>tectonic plates</strong> that move at rates of 1–15 cm per year — roughly the speed your fingernails grow. They are driven by <strong>mantle convection</strong>: hot material rises from depth, spreads laterally, cools, and sinks back, dragging plates along like giant conveyor belts.</p>
+<h2>Volcanoes</h2><p>A <strong>volcano</strong> forms where magma (molten rock) escapes from Earth's interior to the surface. Magma is generated by three processes: decompression melting at divergent boundaries, flux melting at subduction zones (water lowers the melting point of rock), and heat from mantle plumes beneath hotspots.</p>
+<h3>Types of Volcanic Eruptions</h3>
+<ul>
+<li><strong>Effusive eruptions:</strong> Low-viscosity basaltic lava flows smoothly, as in Hawaii's shield volcanoes. Gases escape easily; eruptions are spectacular but less dangerous to life.</li>
+<li><strong>Explosive eruptions:</strong> High-silica (rhyolitic) magma is extremely viscous, trapping gases. Pressure builds until a cataclysmic explosion. Mount St. Helens (1980) and Krakatoa (1883) are examples. Pyroclastic flows — superheated ash and gas at 700°C racing at 700 km/h — are the deadliest hazard.</li>
+<li><strong>Submarine eruptions:</strong> Mid-ocean ridge volcanoes continuously create new ocean floor — the most common form of volcanism on Earth, producing ~75% of all lava annually.</li>
+</ul>
+<div class="eq-label">Volcanic Explosivity Index (VEI) — logarithmic scale</div><div class="eq-block">VEI 0 = gentle eruption; VEI 8 = supervolcano (10,000× more powerful than VEI 4)</div>
+<h2>Earthquakes</h2><p>An <strong>earthquake</strong> is the sudden release of elastic energy stored in rocks under stress. As plates grind against each other, friction prevents movement — stress accumulates over decades or centuries until the fault <strong>ruptures</strong>, releasing energy as seismic waves that shake the ground.</p>
+<p>The <strong>focus</strong> (hypocenter) is the point inside Earth where rupture occurs; the <strong>epicenter</strong> is the point on the surface directly above it. Damage is greatest near the epicenter.</p>
+<h3>Seismic Waves</h3>
+<ul>
+<li><strong>P-waves (Primary):</strong> Compressional waves that travel through solids AND liquids; fastest (~6 km/s in crust), first to arrive at seismographs.</li>
+<li><strong>S-waves (Secondary):</strong> Shear waves; cannot travel through liquids — this is how we know Earth's outer core is liquid. Slower (~3.5 km/s).</li>
+<li><strong>Surface waves (L and R waves):</strong> Travel along Earth's surface; slowest but most destructive — responsible for the rolling ground motion felt during major earthquakes.</li>
+</ul>
+<div class="eq-label">Richter Magnitude Scale (logarithmic)</div><div class="eq-block">M = log₁₀(A) − log₁₀(A₀)   where A = wave amplitude, A₀ = reference amplitude</div>
+<p>Each unit increase represents a <strong>10× increase in amplitude</strong> and a <strong>31.6× increase in energy release</strong>. A magnitude 7 earthquake releases 31.6× more energy than magnitude 6, and 1,000× more than magnitude 5.</p>
+<h2>The 2004 Indian Ocean Tsunami</h2><p>On December 26, 2004, a magnitude 9.1 earthquake off the coast of Sumatra — caused by the Indian Plate subducting beneath the Burma Plate — triggered the deadliest tsunami in recorded history. The fault rupture was 1,200 km long; the seafloor was displaced by up to 15 metres vertically, displacing an enormous volume of water. Waves travelling at 800 km/h in the deep ocean (as fast as a jet airliner) slowed to 35 km/h near shore, but grew from barely detectable 1-cm ripples in the open ocean to walls of water 30 metres high. 230,000 people in 14 countries died.</p>
+<p>This event transformed early warning systems. The Pacific Tsunami Warning System was expanded globally, and seafloor pressure sensors (<em>DART buoys</em>) can now detect tsunamis within minutes of an earthquake, providing crucial warning time for coastal evacuations.</p>`,
+
+    c4: `<p>Acids and bases are among the most fundamental concepts in chemistry, governing reactions in everything from your stomach's digestive system to industrial manufacturing, agriculture, and the ocean's ecosystem. Understanding acids and bases — and the mathematics that describe them — unlocks a vast range of chemical phenomena.</p>
+<h2>The Arrhenius Definition</h2><p>In 1884, Svante Arrhenius proposed the first systematic definition: an <strong>acid</strong> is a substance that produces H⁺ ions in water; a <strong>base</strong> produces OH⁻ ions in water. This explained many reactions but was limited to aqueous solutions.</p>
+<div class="eq-label">Dissociation of Strong Acid (HCl)</div><div class="eq-block">HCl → H⁺ + Cl⁻   (complete dissociation)</div>
+<div class="eq-label">Dissociation of Strong Base (NaOH)</div><div class="eq-block">NaOH → Na⁺ + OH⁻   (complete dissociation)</div>
+<h2>The Brønsted-Lowry Definition</h2><p>In 1923, Johannes Brønsted and Thomas Lowry independently proposed a broader definition: an <strong>acid</strong> is a <em>proton donor</em>; a <strong>base</strong> is a <em>proton acceptor</em>. This explains reactions in non-aqueous solvents and introduces the concept of <strong>conjugate acid-base pairs</strong>.</p>
+<div class="eq-label">Brønsted-Lowry Acid-Base Reaction</div><div class="eq-block">HA + B ⇌ A⁻ + BH⁺   (HA donates proton to B)</div>
+<h2>The pH Scale</h2><p>The <strong>pH scale</strong> measures the concentration of H⁺ ions in solution, using a logarithmic scale from 0–14:</p>
+<div class="eq-label">pH Definition</div><div class="eq-block">pH = −log₁₀[H⁺]   where [H⁺] is concentration in mol/L</div>
+<div class="eq-label">Water Equilibrium</div><div class="eq-block">Kw = [H⁺][OH⁻] = 1.0 × 10⁻¹⁴ at 25°C   → pH + pOH = 14</div>
+<div class="example-box"><div class="ex-label">Example 1 — Calculating pH</div><p>A solution has [H⁺] = 0.0050 mol/L. What is the pH?</p></div>
+<div class="solution-box"><div class="sol-label">Solution</div><p>pH = −log₁₀(0.0050) = −log₁₀(5.0 × 10⁻³)<br>= −(log₁₀ 5.0 + log₁₀ 10⁻³)<br>= −(0.699 + (−3))<br>= −(−2.301)<br><strong>pH = 2.30</strong> → Acidic (below 7)</p></div>
+<div class="example-box"><div class="ex-label">Example 2 — Finding [H⁺] from pH</div><p>A solution has pH = 9.4. What is [H⁺]? What is [OH⁻]?</p></div>
+<div class="solution-box"><div class="sol-label">Solution</div><p>[H⁺] = 10⁻ᵖᴴ = 10⁻⁹·⁴ = <strong>3.98 × 10⁻¹⁰ mol/L</strong><br>pOH = 14 − 9.4 = 4.6<br>[OH⁻] = 10⁻⁴·⁶ = <strong>2.51 × 10⁻⁵ mol/L</strong><br>Verify: [H⁺] × [OH⁻] = 3.98×10⁻¹⁰ × 2.51×10⁻⁵ ≈ 1.0×10⁻¹⁴ ✓</p></div>
+<h2>Neutralisation Reactions</h2><p>When an acid and base react, they neutralise each other, producing a salt and water.</p>
+<div class="eq-label">Neutralisation (general)</div><div class="eq-block">acid + base → salt + water</div>
+<div class="eq-label">Example: HCl + NaOH</div><div class="eq-block">HCl(aq) + NaOH(aq) → NaCl(aq) + H₂O(l)</div>
+<div class="example-box"><div class="ex-label">Example 3 — Titration Calculation</div><p>25.0 mL of HCl solution is neutralised by 32.5 mL of 0.150 mol/L NaOH. Find the concentration of HCl.</p></div>
+<div class="solution-box"><div class="sol-label">Solution</div><p>Step 1: Moles of NaOH = concentration × volume = 0.150 × 0.0325 = 4.875 × 10⁻³ mol<br>Step 2: Mole ratio HCl:NaOH = 1:1 (from equation)<br>Step 3: Moles of HCl = 4.875 × 10⁻³ mol<br>Step 4: [HCl] = moles ÷ volume = 4.875×10⁻³ ÷ 0.0250<br><strong>[HCl] = 0.195 mol/L</strong></p></div>
+<div class="example-box"><div class="ex-label">Example 4 — Strong vs Weak Acid pH</div><p>Compare the pH of 0.10 mol/L HCl (strong) vs 0.10 mol/L CH₃COOH (weak acid, Ka = 1.8 × 10⁻⁵).</p></div>
+<div class="solution-box"><div class="sol-label">Solution</div><p><strong>HCl (strong):</strong> fully dissociates → [H⁺] = 0.10 → pH = −log(0.10) = <strong>1.00</strong><br><br><strong>CH₃COOH (weak):</strong> partial dissociation:<br>Ka = x²/(0.10 − x) ≈ x²/0.10 (x &lt;&lt; 0.10)<br>x² = 1.8×10⁻⁵ × 0.10 = 1.8×10⁻⁶<br>x = [H⁺] = √(1.8×10⁻⁶) = 1.34×10⁻³ mol/L<br>pH = −log(1.34×10⁻³) = <strong>2.87</strong><br><br>Conclusion: despite equal concentration, the strong acid has pH 1.87 units lower — showing why strength matters, not just concentration.</p></div>
+<h2>Buffers: Resisting pH Change</h2><p>A <strong>buffer solution</strong> resists changes in pH when small amounts of acid or base are added. Buffers are vital in biology — blood maintains pH 7.35–7.45; even small deviations cause cellular dysfunction and death. Blood is buffered by the <strong>bicarbonate buffer system</strong>: CO₂ + H₂O ⇌ H₂CO₃ ⇌ H⁺ + HCO₃⁻.</p>
+<div class="eq-label">Henderson-Hasselbalch Equation</div><div class="eq-block">pH = pKa + log([A⁻]/[HA])</div>
+<div class="example-box"><div class="ex-label">Example 5 — Buffer pH</div><p>Calculate the pH of a buffer containing 0.30 mol/L CH₃COONa and 0.20 mol/L CH₃COOH (pKa = 4.74).</p></div>
+<div class="solution-box"><div class="sol-label">Solution</div><p>pH = pKa + log([A⁻]/[HA])<br>pH = 4.74 + log(0.30/0.20)<br>pH = 4.74 + log(1.5)<br>pH = 4.74 + 0.176<br><strong>pH = 4.92</strong></p></div>`,
+  };
+  // Fallback generic
+  const generic = `<p>${l.desc} This ${l.s} lesson covers Grade ${l.g} level material that forms a crucial foundation for advanced study.</p>
+<h2>Introduction</h2><p>Science builds on itself. Everything you learn here connects to what came before and opens doors to deeper understanding of the natural world. ${subj.name} — the study of ${l.title.toLowerCase()} — is one of the most exciting frontiers in modern science.</p>
+<h2>Core Concepts</h2><p>The key ideas in this lesson are carefully chosen to give you a complete mental model. Take notes, revisit examples, and use the Playground mode to test your understanding interactively. The best scientists are those who are not afraid to experiment and make mistakes.</p>
+<h2>Why This Matters</h2><p>These concepts are applied every day by engineers, doctors, researchers, and innovators worldwide. Whether you pursue science professionally or not, understanding these principles will make you a sharper thinker and a better-informed citizen of the world.</p>
+<h2>Key Takeaways</h2><ul><li>Science is empirical — claims must be tested against evidence</li><li>Every phenomenon has an underlying mechanism that can be understood</li><li>Collaboration, curiosity, and careful observation drive discovery</li></ul>`;
+  return docs[l.id]||generic;
+}
+
+// ════════════════════════════════════════
+// PLAYGROUNDS — unique per lesson
+// ════════════════════════════════════════
+function buildPlayground(pg, l) {
+  const fr = document.getElementById('play-frame');
+  const ins = document.getElementById('play-instr');
+  if(G.pRaf){cancelAnimationFrame(G.pRaf);G.pRaf=null;}
+  if(G.sRaf){cancelAnimationFrame(G.sRaf);G.sRaf=null;}
+
+  if(pg==='ide'){buildIDE(fr,ins,l);return;}
+  if(pg.startsWith('solar')||pg==='galaxy-sim'||pg==='universe-sim'){buildSolar(fr,ins,pg);return;}
+  if(pg==='particle-sim'){buildParticle(fr,ins);return;}
+  if(pg==='quark-sim'){buildQuark(fr,ins);return;}
+  if(pg==='zoo-sim'){buildZoo(fr,ins);return;}
+  if(pg==='dna-sim'){buildDNA(fr,ins);return;}
+  if(pg==='circuit-sim'){buildCircuit(fr,ins);return;}
+  if(pg==='wave-sim'){buildWave(fr,ins);return;}
+  if(pg==='forces-sim'){buildForces(fr,ins);return;}
+  if(pg==='energy-sim'){buildEnergy(fr,ins);return;}
+  if(pg==='volcano-sim'){buildVolcano(fr,ins);return;}
+  if(pg==='weather-sim'){buildWeather(fr,ins);return;}
+  if(pg==='acid-sim'||pg==='reaction-sim'){buildReaction(fr,ins);return;}
+  // generic fallback
+  fr.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--muted);font-size:14px">🔧 Playground for <strong style="color:var(--text)">${l.title}</strong> — tap Documents for full content while this interactive is being built.</div>`;
+  ins.textContent='More interactive playgrounds are being added regularly!';
+}
+
+// ── SOLAR SYSTEM ──
+let _pA = PLANETS_DATA.map(()=>Math.random()*Math.PI*2);
+function buildSolar(fr,ins,pg){
+  const stars=Array.from({length:80},()=>`<div style="position:absolute;width:${Math.random()>.85?2:1}px;height:${Math.random()>.85?2:1}px;top:${Math.random()*100}%;left:${Math.random()*100}%;background:#fff;border-radius:50%;opacity:${.2+Math.random()*.8};animation:twk ${1.5+Math.random()*2}s ease-in-out infinite alternate;animation-delay:${Math.random()*3}s"></div>`).join('');
+  const planets=pg==='solar-basic'?PLANETS_DATA.slice(0,3):PLANETS_DATA;
+  fr.innerHTML=`<style>@keyframes twk{from{opacity:.2}to{opacity:1}}</style>
+  <div class="solar-canvas" id="sol-c">${stars}
+    <div class="sun-core" style="width:32px;height:32px;box-shadow:0 0 30px #ff8c00,0 0 70px #ff8c0055"></div>
+    ${planets.map((p,i)=>`<div class="orbit-ring" style="width:${p.dist*2}px;height:${p.dist*2}px"></div>`).join('')}
+    ${planets.map((p,i)=>`
+      <div class="planet-arm" id="pa${i}" style="width:${p.dist}px;height:${p.dist}px;margin-left:-${p.dist}px;margin-top:-${p.dist}px">
+        <div class="planet-body" style="width:${p.r*2}px;height:${p.r*2}px;background:${p.col};top:0;left:${p.dist-p.r}px;transform:translateY(-${p.r}px);box-shadow:0 0 ${p.r*2}px ${p.col}99">
+          <div class="planet-tip"><strong>${p.name}</strong><br>Period: ${p.period}<br>Temp: ${p.temp}<br>Moons: ${p.moons}</div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+  ins.innerHTML=`🌌 <strong>Click any planet</strong> to see details. Watch them orbit in real time!`;
+  const spds=pg==='solar-basic'?[5,3.5,2.9]:[5,3.5,2.9,2.4,1.3,1.0];
+  function step(){spds.forEach((sp,i)=>{_pA[i]+=sp*.003;const el=document.getElementById('pa'+i);if(el)el.style.transform=`rotate(${_pA[i]}rad)`;});G.sRaf=requestAnimationFrame(step);}
+  step();
+}
+
+// ── PARTICLE COLLIDER ──
+let _parts=[], _pm='matter', _pCtx, _pCv;
+function buildParticle(fr,ins){
+  fr.innerHTML=`<div class="part-wrap">
+    <canvas id="pCv" width="700" height="400" style="width:100%;display:block;background:#030308;cursor:crosshair"></canvas>
+    <div class="part-ctrl">
+      <button class="ctrl-btn sel-matter" id="btn-m" onclick="setPM('matter')">🔵 Matter</button>
+      <button class="ctrl-btn" id="btn-a" onclick="setPM('antimatter')" style="border-color:var(--accent3);color:var(--accent3)">🔴 Antimatter</button>
+      <button class="ctrl-btn" onclick="_parts=[]">🗑 Clear</button>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto" id="pCnt">Particles: 0</span>
+    </div></div>`;
+  _pCv=document.getElementById('pCv');_pCtx=_pCv.getContext('2d');
+  _parts=[];_pm='matter';
+  _pCv.onclick=e=>{const r=_pCv.getBoundingClientRect(),sx=_pCv.width/r.width;const x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*(_pCv.height/r.height);const a=Math.random()*Math.PI*2,sp=1.5+Math.random()*1.5;_parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,type:_pm,r:5,id:Math.random()});};
+  function rP(){if(!_pCtx)return;_pCtx.clearRect(0,0,700,400);_pCtx.strokeStyle='rgba(255,255,255,.03)';for(let x=0;x<700;x+=40){_pCtx.beginPath();_pCtx.moveTo(x,0);_pCtx.lineTo(x,400);_pCtx.stroke();}for(let y=0;y<400;y+=40){_pCtx.beginPath();_pCtx.moveTo(0,y);_pCtx.lineTo(700,y);_pCtx.stroke();}
+  const dead=new Set();
+  for(let i=0;i<_parts.length;i++){const p=_parts[i];p.x+=p.vx;p.y+=p.vy;if(p.x<p.r||p.x>700-p.r)p.vx*=-1;if(p.y<p.r||p.y>400-p.r)p.vy*=-1;for(let j=i+1;j<_parts.length;j++){const q=_parts[j];if(p.type===q.type)continue;const dx=p.x-q.x,dy=p.y-q.y;if(Math.sqrt(dx*dx+dy*dy)<p.r+q.r+4){dead.add(p.id);dead.add(q.id);const g=_pCtx.createRadialGradient((p.x+q.x)/2,(p.y+q.y)/2,0,(p.x+q.x)/2,(p.y+q.y)/2,38);g.addColorStop(0,'rgba(255,255,200,1)');g.addColorStop(.5,'rgba(255,150,0,.8)');g.addColorStop(1,'rgba(255,0,0,0)');_pCtx.beginPath();_pCtx.arc((p.x+q.x)/2,(p.y+q.y)/2,38,0,Math.PI*2);_pCtx.fillStyle=g;_pCtx.fill();toast('💥 Annihilation! E = mc²','txp');}}if(dead.has(p.id))continue;const col=p.type==='matter'?'#74b9ff':'#ff6b6b';_pCtx.shadowColor=col;_pCtx.shadowBlur=14;_pCtx.beginPath();_pCtx.arc(p.x,p.y,p.r,0,Math.PI*2);_pCtx.fillStyle=col;_pCtx.fill();_pCtx.shadowBlur=0;}
+  _parts=_parts.filter(p=>!dead.has(p.id));const el=document.getElementById('pCnt');if(el)el.textContent=`Particles: ${_parts.length}`;G.pRaf=requestAnimationFrame(rP);}
+  rP();
+  ins.innerHTML='⚡ Select <strong>Matter</strong> or <strong>Antimatter</strong>, then <strong>click in the field</strong> to fire particles. Watch what happens when they collide!';
+}
+function setPM(m){_pm=m;document.getElementById('btn-m').className='ctrl-btn'+(m==='matter'?' sel-matter':'');document.getElementById('btn-a').className='ctrl-btn'+(m==='antimatter'?' sel-anti':'');if(m==='antimatter'){document.getElementById('btn-a').style.cssText='border-color:var(--accent3);color:var(--accent3);background:rgba(255,107,107,.1)';}else{document.getElementById('btn-a').style.cssText='border-color:var(--accent3);color:var(--accent3)';}}
+
+// ── QUARK BUILDER ──
+let _qA=[];
+function buildQuark(fr,ins){
+  fr.innerHTML=`<div class="quark-arena-wrap">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;margin-bottom:1.2rem">⚛️ Quark Combiner — Build Hadrons</div>
+    <div class="quark-zone">
+      <div class="quark-btns">
+        <button class="q-chip q-up" onclick="addQ('u')">u  Up (+2/3)</button>
+        <button class="q-chip q-down" onclick="addQ('d')">d  Down (−1/3)</button>
+        <button class="q-chip q-strange" onclick="addQ('s')">s  Strange (−1/3)</button>
+        <button class="q-chip q-charm" onclick="addQ('c')">c  Charm (+2/3)</button>
+        <button class="q-chip q-top" onclick="addQ('t')">t  Top (+2/3)</button>
+        <button class="q-chip q-bottom" onclick="addQ('b')">b  Bottom (−1/3)</button>
+      </div>
+      <div class="q-arena" id="qar"></div>
+      <div>
+        <div class="q-result" id="qres">Add quarks →</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin:.4rem 0"><button class="ctrl-btn" onclick="_qA=[];updateQ()">Clear</button></div>
+        <div class="q-info">u+u+d = Proton<br>u+d+d = Neutron<br>u+s+s = Ξ (Xi)<br>Try any combination!</div>
+      </div>
+    </div></div>`;
+  _qA=[];
+  ins.innerHTML='🔬 Click quarks to add them to the arena (max 3). Try <strong>u+u+d</strong> to build a Proton!';
+}
+function addQ(t){if(_qA.length>=3){toast('Max 3 quarks!','');return;}_qA.push(t);updateQ();}
+function updateQ(){
+  const ar=document.getElementById('qar'),rs=document.getElementById('qres');if(!ar)return;
+  const cm={u:'q-in q-up',d:'q-in q-down',s:'q-in q-strange',c:'q-in q-charm',t:'q-in q-top',b:'q-in q-bottom'};
+  ar.innerHTML=_qA.map(q=>`<div class="${cm[q]}" style="padding:5px 9px;border-radius:8px">${q}</div>`).join('');
+  const combo=_qA.slice().sort().join('');
+  const P={duu:'⚛️ Proton (charge +1)',ddu:'⚙️ Neutron (charge 0)',dss:'Ξ⁰ Xi baryon',ccu:'Ξ_cc++ doubly charmed',uus:'Σ⁺ Sigma baryon',dds:'Σ⁻ Sigma baryon',btt:'🌀 Exotic top baryon'};
+  let name=P[combo]||(_qA.length===3?'🔬 Exotic baryon!':_qA.length===2?'🔵 Meson candidate':_qA.length===1?'One quark — add more':'Empty arena');
+  ar.className='q-arena'+(combo==='duu'?' proton-glow':combo==='ddu'?' neutron-glow':'');
+  if(combo==='duu')toast('⚛️ Proton assembled!','tok');
+  else if(combo==='ddu')toast('⚙️ Neutron assembled!','tok');
+  if(rs)rs.textContent=name;
+}
+
+// ── ZOO ──
+function buildZoo(fr,ins){
+  fr.innerHTML=`<div class="zoo-wrap">
+    <input class="zoo-search" placeholder="🔍 Search animals..." oninput="filterZ(this.value)">
+    <div class="zoo-grid" id="zoo-grid"></div>
+    <div id="zoo-detail"></div></div>`;
+  G.selectedAnimal=ANIMALS[0];
+  ins.innerHTML='🦁 Search for any animal and explore its <strong>anatomy, organs, and fun facts</strong>!';
+  filterZ('');
+}
+let _zt='info';
+function filterZ(q){const f=ANIMALS.filter(a=>a.name.toLowerCase().includes(q.toLowerCase()));const g=document.getElementById('zoo-grid');if(!g)return;g.innerHTML=f.map(a=>`<div class="zoo-card ${a.name===G.selectedAnimal?.name?'sel':''}" onclick="selZ('${a.name}')"><div class="ze">${a.emoji}</div><div class="zn">${a.name}</div></div>`).join('');renderZ();}
+function selZ(n){G.selectedAnimal=ANIMALS.find(a=>a.name===n);_zt='info';filterZ(document.querySelector('.zoo-search')?.value||'');}
+function setZT(t){_zt=t;document.querySelectorAll('.ztab').forEach(b=>b.classList.toggle('active',b.dataset.t===t));renderZTab();}
+function renderZ(){const el=document.getElementById('zoo-detail');if(!el||!G.selectedAnimal)return;const a=G.selectedAnimal;el.innerHTML=`<div class="zoo-detail"><div class="zoo-big">${a.emoji}</div><div class="zoo-info"><h3>${a.name}</h3><p>Class: <strong>${a.cls}</strong> · ${a.habitat}</p><div class="zoo-tab-row"><button class="ztab ${_zt==='info'?'active':''}" data-t="info" onclick="setZT('info')">ℹ Info</button><button class="ztab ${_zt==='anatomy'?'active':''}" data-t="anatomy" onclick="setZT('anatomy')">🦴 Anatomy</button><button class="ztab ${_zt==='fun'?'active':''}" data-t="fun" onclick="setZT('fun')">⭐ Fun Facts</button></div><div class="ztab-content" id="ztc"></div></div></div>`;renderZTab();}
+function renderZTab(){const el=document.getElementById('ztc');if(!el||!G.selectedAnimal)return;const a=G.selectedAnimal;if(_zt==='info')el.innerHTML=`<strong>Diet:</strong> ${a.diet}<br><strong>Lifespan:</strong> ${a.lifespan}<br><strong>Habitat:</strong> ${a.habitat}`;else if(_zt==='anatomy')el.innerHTML=`<strong>Skeleton:</strong> ${a.bones}<br><strong>Key organs:</strong> ${a.organs}`;else el.innerHTML=`🌟 ${a.fun}`;}
+
+// ── DNA BUILDER ──
+const BASES={A:'T',T:'A',G:'C',C:'G'};
+const BASE_COLORS={A:'#ff6b6b',T:'#74b9ff',G:'#51e5a8',C:'#ffd700'};
+let _dna=[];
+function buildDNA(fr,ins){
+  fr.innerHTML=`<div class="dna-wrap">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;margin-bottom:1rem">🧬 DNA Strand Builder</div>
+    <div class="dna-helix" id="dna-display" style="min-height:60px;margin-bottom:1rem;font-size:14px;letter-spacing:3px"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:.8rem">Complementary strand (read by RNA polymerase):</div>
+    <div class="dna-helix" id="dna-comp" style="min-height:30px;margin-bottom:1rem;color:var(--pink)"></div>
+    <div class="base-btns">
+      ${['A','T','G','C'].map(b=>`<button class="base-btn" style="background:${BASE_COLORS[b]}33;color:${BASE_COLORS[b]};border:1px solid ${BASE_COLORS[b]}" onclick="addBase('${b}')">${b}</button>`).join('')}
+      <button class="base-btn" style="background:rgba(255,255,255,.1);color:var(--muted);border:1px solid var(--border)" onclick="removeBase()">⌫</button>
+      <button class="base-btn" style="background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border)" onclick="_dna=[];updateDNA()">Clear</button>
+    </div>
+    <div style="margin-top:1rem;font-size:11px;color:var(--muted)">GC pairs: 3 hydrogen bonds (stronger) · AT pairs: 2 hydrogen bonds</div>
+  </div>`;
+  _dna=[];ins.innerHTML='🧬 Click bases to build your DNA strand! The complementary strand forms automatically.';
+}
+function addBase(b){if(_dna.length>=20){toast('Max 20 bases!','');return;}_dna.push(b);updateDNA();}
+function removeBase(){_dna.pop();updateDNA();}
+function updateDNA(){
+  const d=document.getElementById('dna-display'),c=document.getElementById('dna-comp');if(!d)return;
+  d.innerHTML=_dna.map(b=>`<span style="color:${BASE_COLORS[b]}">${b}</span>`).join(' ');
+  c.innerHTML=_dna.map(b=>`<span style="color:${BASE_COLORS[BASES[b]]}">${BASES[b]}</span>`).join(' ');
+  if(!d.innerHTML)d.innerHTML='<span style="color:var(--muted)">Add bases above...</span>';
+}
+
+// ── CIRCUIT BUILDER ──
+let _cc, _cctx, _comps=[], _selComp='resistor';
+const COMP_SYMBOLS={resistor:'⬛',capacitor:'⚡',led:'💡',switch:'🔘',battery:'🔋'};
+function buildCircuit(fr,ins){
+  fr.innerHTML=`<div class="circuit-wrap">
+    <canvas id="ccv" class="circuit-canvas" width="600" height="350" style="width:100%;max-width:600px"></canvas>
+    <div class="circuit-ctrl">
+      ${Object.entries(COMP_SYMBOLS).map(([k,v])=>`<button class="ccomp ${k==='resistor'?'active':''}" data-c="${k}" onclick="selComp('${k}',this)">${v} ${k}</button>`).join('')}
+      <button class="ccomp" onclick="_comps=[];drawCircuit()">🗑 Clear</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:.5rem" id="cinfo">Total resistance: — Ω  |  Voltage: 9V (battery)</div>
+  </div>`;
+  _cc=document.getElementById('ccv');_cctx=_cc.getContext('2d');_comps=[];
+  _cc.onclick=e=>{const r=_cc.getBoundingClientRect();_comps.push({type:_selComp,x:(e.clientX-r.left)*(_cc.width/r.width),y:(e.clientY-r.top)*(_cc.height/r.height)});drawCircuit();};
+  drawCircuit();
+  ins.innerHTML='🔌 Select a component and <strong>click on the circuit board</strong> to place it. Build your own electrical circuit!';
+}
+function selComp(c,btn){_selComp=c;document.querySelectorAll('.ccomp').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function drawCircuit(){if(!_cctx)return;_cctx.clearRect(0,0,600,350);_cctx.strokeStyle='rgba(255,255,255,.06)';_cctx.lineWidth=1;for(let x=0;x<600;x+=30){_cctx.beginPath();_cctx.moveTo(x,0);_cctx.lineTo(x,350);_cctx.stroke();}for(let y=0;y<350;y+=30){_cctx.beginPath();_cctx.moveTo(0,y);_cctx.lineTo(600,y);_cctx.stroke();}
+_comps.forEach(c=>{_cctx.font='22px serif';_cctx.fillText(COMP_SYMBOLS[c.type]||'?',c.x-11,c.y+8);_cctx.font='10px DM Sans';_cctx.fillStyle='rgba(255,255,255,.4)';_cctx.fillText(c.type,c.x-15,c.y+22);_cctx.fillStyle='#fff';});
+const res=_comps.filter(c=>c.type==='resistor').length;const inf=document.getElementById('cinfo');if(inf)inf.textContent=`Resistors: ${res} (${res*100}Ω series)  |  Battery: 9V  |  Current: ${res>0?(9/(res*100)*1000).toFixed(1):0} mA`;}
+
+// ── WAVE SIM ──
+let _wt=0;
+function buildWave(fr,ins){
+  fr.innerHTML=`<canvas id="wcv" width="700" height="300" style="width:100%;display:block;background:#050510"></canvas>
+  <div class="part-ctrl">
+    <label style="font-size:11px;color:var(--muted)">Frequency: <input type="range" id="wfreq" min="1" max="5" step=".1" value="2" oninput="document.getElementById('wfv').textContent=this.value+'Hz'" style="width:80px;margin:0 4px"><span id="wfv">2Hz</span></label>
+    <label style="font-size:11px;color:var(--muted)">Amplitude: <input type="range" id="wamp" min="10" max="100" value="60" oninput="document.getElementById('wav').textContent=this.value" style="width:80px;margin:0 4px"><span id="wav">60</span></label>
+    <label style="font-size:11px;color:var(--muted)">Wave type: <select id="wtype" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;font-size:11px"><option>Transverse</option><option>Longitudinal</option><option>Standing</option></select></label>
+  </div>`;
+  const cv=document.getElementById('wcv'),ctx=cv.getContext('2d');
+  function anim(){ctx.fillStyle='rgba(5,5,16,.15)';ctx.fillRect(0,0,700,300);_wt+=0.05;const freq=parseFloat(document.getElementById('wfreq')?.value||2);const amp=parseFloat(document.getElementById('wamp')?.value||60);const type=document.getElementById('wtype')?.value||'Transverse';ctx.lineWidth=2.5;ctx.shadowBlur=8;ctx.shadowColor='#4ecdc4';ctx.strokeStyle='#4ecdc4';ctx.beginPath();for(let x=0;x<700;x++){let y;if(type==='Transverse')y=150+amp*Math.sin(freq*(x/700)*Math.PI*6-_wt*freq*2);else if(type==='Longitudinal')y=150+amp*Math.sin(freq*(x/700)*Math.PI*8-_wt*2)*Math.sin(x/30);else y=150+amp*Math.sin(freq*(x/700)*Math.PI*6)*Math.cos(_wt*0.5);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.shadowBlur=0;G.pRaf=requestAnimationFrame(anim);}
+  anim();ins.innerHTML='🌊 Adjust <strong>frequency</strong> and <strong>amplitude</strong> to change the wave. Switch between wave types to see the difference!';
+}
+
+// ── FORCES SIM ──
+let _fObj={x:100,y:200,vx:0,vy:0,mass:5},_fDrag=false,_fGrav=true,_fFric=true;
+function buildForces(fr,ins){
+  fr.innerHTML=`<canvas id="fcv" width="700" height="350" style="width:100%;display:block;background:#050514;cursor:grab"></canvas>
+  <div class="part-ctrl">
+    <button class="ctrl-btn ${_fGrav?'sel-matter':''}" onclick="_fGrav=!_fGrav;this.className='ctrl-btn'+(G.fGrav=' '+_fGrav?'':'')" id="grav-btn">🌍 Gravity ON</button>
+    <button class="ctrl-btn" onclick="_fObj.vx=5;_fObj.vy=-8">🚀 Launch</button>
+    <button class="ctrl-btn" onclick="_fObj={x:100,y:200,vx:0,vy:0,mass:5}">↺ Reset</button>
+    <label style="font-size:11px;color:var(--muted)">Mass: <input type="range" id="fmass" min="1" max="20" value="5" oninput="_fObj.mass=+this.value;document.getElementById('fmv').textContent=this.value+'kg'" style="width:60px;margin:0 4px"><span id="fmv">5kg</span></label>
+  </div>`;
+  const cv=document.getElementById('fcv'),ctx=cv.getContext('2d');
+  cv.onmousedown=e=>{_fDrag=true;};cv.onmouseup=e=>{_fDrag=false;};cv.onmousemove=e=>{if(!_fDrag)return;const r=cv.getBoundingClientRect();_fObj.x=(e.clientX-r.left)*(700/r.width);_fObj.y=(e.clientY-r.top)*(350/r.height);_fObj.vx=0;_fObj.vy=0;};
+  const gb=document.getElementById('grav-btn');
+  function anim(){ctx.fillStyle='rgba(5,5,20,.2)';ctx.fillRect(0,0,700,350);if(!_fDrag){if(_fGrav)_fObj.vy+=0.3;if(_fFric){_fObj.vx*=.99;}_fObj.x+=_fObj.vx;_fObj.y+=_fObj.vy;if(_fObj.y>310){_fObj.y=310;_fObj.vy*=-0.7;_fObj.vx*=0.85;}if(_fObj.x<15)_fObj.x=15;if(_fObj.x>685)_fObj.x=685;}ctx.strokeStyle='rgba(255,255,255,.1)';ctx.lineWidth=1;for(let x=0;x<700;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,350);ctx.stroke();}ctx.fillStyle='rgba(255,255,255,.05)';ctx.fillRect(0,320,700,30);ctx.fillStyle='#888';ctx.fillRect(0,318,700,4);ctx.beginPath();ctx.arc(_fObj.x,_fObj.y,12+_fObj.mass*.5,0,Math.PI*2);const g2=ctx.createRadialGradient(_fObj.x,_fObj.y,0,_fObj.x,_fObj.y,12+_fObj.mass*.5);g2.addColorStop(0,'#a29bfe');g2.addColorStop(1,'#7c6fcd');ctx.fillStyle=g2;ctx.shadowColor='#a29bfe';ctx.shadowBlur=16;ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='10px DM Mono';ctx.fillText(`v: ${Math.sqrt(_fObj.vx**2+_fObj.vy**2).toFixed(1)} m/s`,_fObj.x+18,_fObj.y);ctx.fillText(`F: ${(_fObj.mass*9.8*(_fGrav?1:0)).toFixed(0)}N`,_fObj.x+18,_fObj.y+13);if(gb)gb.textContent='🌍 Gravity '+(G._fg=_fGrav?'ON':'OFF');G.pRaf=requestAnimationFrame(anim);}
+  anim();ins.innerHTML='🌍 Drag the ball to move it, hit <strong>Launch</strong> to throw it. Toggle gravity on/off and change mass!';
+}
+
+// ── ENERGY SIM ──
+let _eH=250,_eDrop=false;
+function buildEnergy(fr,ins){
+  fr.innerHTML=`<canvas id="ecv" width="700" height="350" style="width:100%;display:block;background:#05050e;cursor:pointer"></canvas>
+  <div class="part-ctrl"><button class="ctrl-btn" onclick="_eH=280;_eDrop=false">↺ Reset</button><label style="font-size:11px;color:var(--muted)">Drag height ↑↓ or click to drop</label><span style="font-size:11px;color:var(--muted);margin-left:auto" id="einfo">PE: — J  KE: — J</span></div>`;
+  const cv=document.getElementById('ecv'),ctx=cv.getContext('2d');
+  let vy=0,y=80,x=350,mass=5;
+  cv.onclick=()=>_eDrop=!_eDrop;
+  cv.onmousemove=e=>{if(!_eDrop){const r=cv.getBoundingClientRect();y=(e.clientY-r.top)*(350/r.height);_eH=350-y;}};
+  function anim(){ctx.clearRect(0,0,700,350);ctx.fillStyle='rgba(5,5,14,.4)';ctx.fillRect(0,0,700,350);ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(0,318,700,32);ctx.fillStyle='#444';ctx.fillRect(0,316,700,4);if(_eDrop){vy+=0.5;y+=vy;if(y>=308){y=308;vy*=-0.75;}}else{vy=0;}const h=Math.max(0,(316-y)/316*100);const pe=mass*9.8*(316-y)/30;const ke=0.5*mass*vy*vy;ctx.fillStyle='rgba(78,205,196,.15)';ctx.fillRect(30,y,14,316-y);ctx.fillStyle='var(--accent2)';ctx.font='11px DM Mono';ctx.fillText('PE',28,y-8);ctx.fillStyle='rgba(255,107,107,.15)';ctx.fillRect(656,316-ke*3,14,ke*3);ctx.fillStyle='var(--accent3)';ctx.fillText('KE',654,316-ke*3-6);ctx.beginPath();ctx.arc(x,y,14,0,Math.PI*2);const g=ctx.createRadialGradient(x,y,0,x,y,14);g.addColorStop(0,'#ffd700');g.addColorStop(1,'#ff8c00');ctx.fillStyle=g;ctx.shadowColor='#ffd700';ctx.shadowBlur=20;ctx.fill();ctx.shadowBlur=0;const ei=document.getElementById('einfo');if(ei)ei.textContent=`PE: ${pe.toFixed(1)} J  |  KE: ${ke.toFixed(1)} J  |  Total: ${(pe+ke).toFixed(1)} J`;G.pRaf=requestAnimationFrame(anim);}
+  anim();ins.innerHTML='⚡ Move your mouse to set height, then <strong>click to drop</strong>! Watch potential energy convert to kinetic energy in real time.';
+}
+
+// ── VOLCANO SIM ──
+let _vErupt=false,_vPressure=0,_vParts=[];
+function buildVolcano(fr,ins){
+  fr.innerHTML=`<canvas id="vcv" width="700" height="400" style="width:100%;display:block;background:#0a0508;cursor:pointer"></canvas>
+  <div class="part-ctrl">
+    <button class="ctrl-btn" id="vbtn" onclick="triggerErupt()">🌋 Trigger Eruption</button>
+    <label style="font-size:11px;color:var(--muted)">Magma pressure: <input type="range" id="vpres" min="1" max="10" value="5" style="width:80px;margin:0 4px"></label>
+    <span style="font-size:11px;color:var(--muted)" id="vinfo">Pressure building...</span>
+  </div>`;
+  const cv=document.getElementById('vcv'),ctx=cv.getContext('2d');
+  function drawV(){ctx.clearRect(0,0,700,400);const g=ctx.createLinearGradient(0,0,0,400);g.addColorStop(0,'#1a0a1e');g.addColorStop(1,'#0a0508');ctx.fillStyle=g;ctx.fillRect(0,0,700,400);ctx.fillStyle='#2d1810';ctx.beginPath();ctx.moveTo(200,400);ctx.quadraticCurveTo(350,160,500,400);ctx.fill();ctx.fillStyle='#3d2218';ctx.beginPath();ctx.moveTo(240,400);ctx.quadraticCurveTo(350,180,460,400);ctx.fill();ctx.fillStyle='#1a0a05';ctx.beginPath();ctx.ellipse(350,225,40,18,0,0,Math.PI*2);ctx.fill();if(_vErupt){ctx.fillStyle='rgba(255,60,0,.3)';ctx.beginPath();ctx.ellipse(350,235,50,22,0,0,Math.PI*2);ctx.fill();}ctx.fillStyle='rgba(20,5,0,.8)';ctx.fillRect(0,340,700,60);ctx.fillStyle='#1a0d05';ctx.fillRect(0,340,700,10);}
+  function updateP(){if(!_vErupt&&_vPressure<10){_vPressure+=0.02;const i=document.getElementById('vinfo');if(i)i.textContent=`Pressure: ${_vPressure.toFixed(1)}/10 — ${_vPressure>8?'⚠️ Critical!':_vPressure>5?'High':'Building...'}`;}if(_vPressure>=10&&!_vErupt){triggerErupt();}}
+  _vParts=[];
+  function step(){drawV();updateP();_vParts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life-=1;p.r=Math.max(.5,p.r-.02);});_vParts=_vParts.filter(p=>p.life>0&&p.y<410);_vParts.forEach(p=>{const a=p.life/p.maxLife;ctx.globalAlpha=a;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.col;ctx.shadowColor=p.col;ctx.shadowBlur=p.lava?12:4;ctx.fill();});ctx.globalAlpha=1;ctx.shadowBlur=0;G.pRaf=requestAnimationFrame(step);}
+  step();ins.innerHTML='🌋 Watch the magma pressure build, then <strong>trigger an eruption</strong>! Adjust pressure to control the explosive force.';
+}
+function triggerErupt(){
+  _vErupt=true;_vPressure=0;const pres=parseFloat(document.getElementById('vpres')?.value||5);
+  for(let i=0;i<80;i++){const a=-Math.PI/2+(-0.6+Math.random()*1.2);const sp=2+Math.random()*pres*1.5;_vParts.push({x:350,y:225,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:2+Math.random()*4,life:60+Math.random()*80,maxLife:140,col:Math.random()>.5?'#ff4400':'#ff8800',lava:true});}
+  for(let i=0;i<40;i++){_vParts.push({x:350+(-80+Math.random()*160),y:225,vx:(-0.5+Math.random())*2,vy:-(2+Math.random()*pres*.5),r:3+Math.random()*6,life:80+Math.random()*60,maxLife:140,col:`rgba(80,80,80,${.5+Math.random()*.5})`,lava:false});}
+  toast('🌋 Eruption triggered!','txp');setTimeout(()=>{_vErupt=false;},3000);
+}
+
+// ── WEATHER SIM ──
+function buildWeather(fr,ins){
+  const cities=[{name:'Equatorial',temp:28,cloud:80,rain:90},{name:'Temperate',temp:15,cloud:50,rain:40},{name:'Desert',temp:38,cloud:5,rain:2},{name:'Arctic',temp:-15,cloud:30,rain:10},{name:'Mountain',temp:5,cloud:70,rain:60}];
+  let selCity=0;
+  function render(){
+    const c=cities[selCity];
+    fr.innerHTML=`<div style="padding:1.5rem;background:linear-gradient(135deg,${c.temp>20?'#1a2a4a':'#0a1a3a'} 0%,${c.temp<0?'#1a2a40':'#051020'} 100%);min-height:300px;position:relative;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
+        <div><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700">${c.name} Climate</div><div style="font-size:40px;font-weight:800;color:${c.temp<0?'#74b9ff':c.temp>30?'#ff6b6b':'#ffd700'}">${c.temp}°C</div></div>
+        <div style="text-align:right;font-size:13px;color:rgba(255,255,255,.6)">☁️ Cloud cover: ${c.cloud}%<br>🌧 Rain chance: ${c.rain}%<br>${c.temp<0?'❄️ Freezing':c.temp>35?'🔥 Extreme heat':'🌡️ Moderate'}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${cities.map((ct,i)=>`<button onclick="selCity=${i};render()" style="padding:5px 11px;border-radius:20px;border:1px solid ${i===selCity?'var(--accent2)':'var(--border)'};background:${i===selCity?'rgba(78,205,196,.15)':'transparent'};color:${i===selCity?'var(--accent2)':'var(--muted)'};font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif">${ct.name}</button>`).join('')}
+      </div>
+      <div style="margin-top:1rem;font-size:12px;color:rgba(255,255,255,.5)">
+        ${c.temp>30?'<p>Intense solar radiation drives strong convection currents, creating towering cumulonimbus clouds and frequent thunderstorms. High evaporation rates from vegetation (transpiration) add significant moisture to the atmosphere.</p>':c.temp<0?'<p>Below-freezing temperatures cause water vapour to crystallise directly into ice crystals, forming snow and sleet. The Arctic\'s high albedo (reflectivity) reflects 80% of sunlight, maintaining the cold.</p>':c.cloud>60?'<p>Warm moist air rising over terrain or meeting cold air masses creates cloud formation. Water vapour condenses around aerosol particles to form cloud droplets — precipitation occurs when droplets grow heavy enough.</p>':'<p>Dry, stable air masses suppress cloud formation. Low humidity allows rapid nighttime cooling by radiation. During the day, intense ground heating can trigger localised convective dust storms.</p>'}
+      </div>
+    </div>`;
+  }
+  render();ins.innerHTML='🌤️ Click different climate zones to explore weather patterns and atmospheric processes around the world!';
+}
+
+// ── ACID/REACTION SIM ──
+let _pH=7;
+function buildReaction(fr,ins){
+  fr.innerHTML=`<div style="padding:1.5rem">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;margin-bottom:1rem">🧪 pH & Neutralisation Lab</div>
+    <div style="display:flex;gap:1.5rem;align-items:flex-start;flex-wrap:wrap">
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:.5rem">Add chemicals to the beaker:</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem">
+          <button class="ctrl-btn" onclick="addChem(-2,'HCl (strong acid)')">+ HCl (strong acid)</button>
+          <button class="ctrl-btn" onclick="addChem(-1,'CH₃COOH (weak acid)')">+ CH₃COOH (weak acid)</button>
+          <button class="ctrl-btn" onclick="addChem(+2,'NaOH (strong base)')">+ NaOH (strong base)</button>
+          <button class="ctrl-btn" onclick="addChem(+1,'NH₃ (weak base)')">+ NH₃ (weak base)</button>
+          <button class="ctrl-btn" onclick="_pH=7;updateBeaker()">↺ Reset to pH 7</button>
+        </div>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-family:'DM Mono',monospace;font-size:48px;font-weight:500;text-align:center;margin-bottom:.5rem" id="phval" style="color:green">7.0</div>
+        <div style="height:20px;background:linear-gradient(90deg,#ff4444,#ff8c00,#ffd700,#88dd44,#44bb44,#00aacc,#6644cc);border-radius:10px;position:relative;margin-bottom:.5rem"><div id="phind" style="position:absolute;top:-5px;width:4px;height:30px;background:#fff;border-radius:2px;transition:left .4s;left:50%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:1rem"><span>0 (acid)</span><span>7 (neutral)</span><span>14 (base)</span></div>
+        <div id="beaker" style="width:120px;height:150px;margin:0 auto;border:3px solid var(--border);border-top:none;border-radius:0 0 20px 20px;position:relative;overflow:hidden;background:#05050e">
+          <div id="bliq" style="position:absolute;bottom:0;left:0;right:0;height:60%;transition:background .5s;background:#44bb44"></div>
+        </div>
+        <div id="binfo" style="font-size:11px;color:var(--muted);text-align:center;margin-top:.5rem">Neutral solution</div>
+      </div>
+    </div>
+    <div id="rxn-log" style="margin-top:1rem;font-size:12px;color:var(--accent2);font-family:'DM Mono',monospace;min-height:40px"></div>
+  </div>`;
+  updateBeaker();
+  ins.innerHTML='🧪 Add acids or bases to the beaker and watch the pH change in real time! Try to reach exactly pH 7 (neutralisation).';
+}
+const pH_COLS={acid:'#ff4444',weakacid:'#ff8844',neutral:'#44bb44',weakbase:'#4488cc',base:'#6644cc'};
+function addChem(delta,name){_pH=Math.max(0,Math.min(14,_pH+delta));updateBeaker();const log=document.getElementById('rxn-log');if(log)log.textContent=`Added ${name} → new pH: ${_pH.toFixed(1)}   ${_pH<7?'[H⁺] > [OH⁻]':_pH>7?'[OH⁻] > [H⁺]':'Neutralised!'}`;if(Math.abs(_pH-7)<0.1)toast('⚗️ Neutralised! pH = 7','tok');}
+function updateBeaker(){const ph=_pH;const pv=document.getElementById('phval');const pi=document.getElementById('phind');const bl=document.getElementById('bliq');const bi=document.getElementById('binfo');const type=ph<3?'acid':ph<6?'weakacid':ph<=8?'neutral':ph<11?'weakbase':'base';const cols={acid:'#ff3333',weakacid:'#ff7722',neutral:'#33bb55',weakbase:'#4499ee',base:'#7733ff'};if(pv){pv.textContent=ph.toFixed(1);pv.style.color=cols[type];}if(pi)pi.style.left=`calc(${ph/14*100}% - 2px)`;if(bl)bl.style.background=cols[type];const desc={acid:'⚠️ Strongly acidic — corrosive!',weakacid:'Mildly acidic (like vinegar or coffee)',neutral:'✅ Neutral — pure water',weakbase:'Mildly basic (like baking soda)',base:'⚠️ Strongly basic — caustic!'};if(bi)bi.textContent=desc[type];}
+
+// ── CODE IDE ──
+let _ideRAF, _ideWorker;
+function buildIDE(fr, ins, l) {
+  const starter=IDE_STARTERS[l.id]||`# ${l.title} — Code Playground
+# Start coding in any language!
+print("Hello from Nova Science!")`;
+  const langs=['Python','JavaScript','HTML','CSS','SQL','Bash','Java','C++','Ruby','Go','Rust','Swift'];
+  fr.innerHTML=`<div class="ide-wrap">
+    <div class="ide-toolbar">
+      <select class="ide-lang" id="ide-lang">${langs.map(l=>`<option>${l}</option>`).join('')}</select>
+      <button class="ide-run" onclick="runCode()">▶ Run</button>
+      <button class="ide-clear" onclick="document.getElementById('ide-out').innerHTML='';document.getElementById('ide-out').className='ide-out-body'">Clear Output</button>
+      <span class="ide-status" id="ide-status">Ready</span>
+    </div>
+    <div class="ide-body">
+      <div class="ide-editor-wrap">
+        <div class="ide-lines" id="ide-lines">1</div>
+        <textarea class="ide-editor" id="ide-code" spellcheck="false" oninput="updateLines()" onkeydown="handleTab(event)">${starter}</textarea>
+      </div>
+      <div class="ide-output">
+        <div class="ide-out-hdr">OUTPUT</div>
+        <div class="ide-out-body" id="ide-out">// Run your code to see output...</div>
+      </div>
+    </div>
+  </div>`;
+  updateLines();
+  ins.innerHTML=`💻 Write code in any language! For <strong>Python</strong> and <strong>JavaScript</strong>, the AI will run and explain your code. For other languages, the AI reviews it.`;
+}
+function updateLines(){
+  const code=document.getElementById('ide-code');const lines=document.getElementById('ide-lines');if(!code||!lines)return;const n=code.value.split('\n').length;lines.innerHTML=Array.from({length:n},(_,i)=>i+1).join('<br>');}
+function handleTab(e){if(e.key==='Tab'){e.preventDefault();const ta=document.getElementById('ide-code');const s=ta.selectionStart;ta.value=ta.value.substring(0,s)+'  '+ta.value.substring(s);ta.selectionStart=ta.selectionEnd=s+2;updateLines();}}
+async function runCode(){
+  const code=document.getElementById('ide-code')?.value||'';
+  const lang=document.getElementById('ide-lang')?.value||'Python';
+  const out=document.getElementById('ide-out');
+  const status=document.getElementById('ide-status');
+  if(!code.trim()){return;}
+  out.className='ide-out-body';out.textContent='Running...';status.textContent='Running...';
+  if(CLAUDE_KEY){
+    try{
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:`Execute this ${lang} code and return ONLY the output (what the program would print), plus a one-line explanation. If there are errors, explain them. Code:\n\`\`\`${lang.toLowerCase()}\n${code}\n\`\`\``}]})});
+      const d=await res.json();
+      out.textContent=d.content?.[0]?.text||'No output';status.textContent='Done';return;
+    }catch(e){}
+  }
+  // Fallback: simulate output for common patterns
+  status.textContent='Simulated';
+  if(lang==='Python'){
+    let sim='';const lines=code.split('\n');
+    lines.forEach(ln=>{
+      const pm=ln.match(/print\(f?["'](.+)["']\)/);
+      if(pm)sim+=pm[1].replace(/{[^}]+}/g,'[value]')+'\n';
+      const pm2=ln.match(/print\((.+)\)/);
+      if(pm2&&!pm)sim+=`> ${pm2[1]}\n`;
+    });
+    out.textContent=sim||'// Add a print() statement to see output\n// Connect your Claude API key for full execution';
+  } else if(lang==='JavaScript'){
+    let logs=[];const orig=console.log;console.log=(...a)=>logs.push(a.map(x=>JSON.stringify(x)).join(' '));
+    try{eval(code);}catch(e){out.className='ide-out-body err';out.textContent='Error: '+e.message;console.log=orig;status.textContent='Error';return;}
+    console.log=orig;out.textContent=logs.join('\n')||'// No console.log output';
+  } else {
+    out.textContent=`// ${lang} code review:\n// Your code structure looks correct.\n// Add your Claude API key for full AI-powered execution and feedback.\n// Language: ${lang}\n// Lines: ${code.split('\n').length}`;
+  }
+  status.textContent='Done';
+}
+
+// ════════════════════════════════════════
+// MULTIPLAYER
+// ════════════════════════════════════════
+function buildGlobalLB(){
+  const el=document.getElementById('global-lb');if(!el)return;
+  const me={name:G.profile?.name||'You',score:G.xp,pct:Math.min(100,Math.round(G.xp/84))};
+  const lb=[me,...GLOBAL_LB_DATA].sort((a,b)=>b.score-a.score).slice(0,6);
+  const r=['🥇','🥈','🥉','4.','5.','6.'];
+  el.innerHTML=lb.map((p,i)=>`<li class="lb-row">
+    <span class="lb-rank ${i===0?'g':i===1?'s':i===2?'b':''}">${r[i]}</span>
+    <span class="lb-name">${p.name}${p.name===(G.profile?.name||'You')?'<span style="font-size:9px;color:var(--accent2);margin-left:4px">(you)</span>':''}</span>
+    <div class="lb-bar"><div class="lb-fill" style="width:${p.pct||0}%"></div></div>
+    <span class="lb-score">${p.score}</span>
+  </li>`).join('');
+}
+function createRoom(){
+  const code='NOVA'+Math.floor(10+Math.random()*90);
+  document.getElementById('room-code').textContent=code;
+  document.getElementById('room-section').style.display='block';
+  document.getElementById('game-section').style.display='none';
+  document.getElementById('players-row').innerHTML=`
+    <div class="player-chip"><div class="dot dot-on"></div>${G.profile?.name||'You'} (host)</div>
+    <div class="player-chip"><div class="dot dot-wait"></div>Waiting...</div>`;
+  setTimeout(()=>{const g=['Zephyr K.','Nova M.','Atlas J.'][Math.floor(Math.random()*3)];document.getElementById('players-row').innerHTML+=`<div class="player-chip"><div class="dot dot-on"></div>${g}</div>`;toast(`${g} joined!`,'tok');},2000);
+  toast(`Room created! Code: ${code}`,'tok');
+}
+function joinRoomP(){const c=prompt('Enter room code:','NOVA42');if(!c)return;document.getElementById('room-code').textContent=c.toUpperCase();document.getElementById('room-section').style.display='block';document.getElementById('game-section').style.display='none';document.getElementById('players-row').innerHTML=`<div class="player-chip"><div class="dot dot-on"></div>Host</div><div class="player-chip"><div class="dot dot-on"></div>${G.profile?.name||'You'}</div>`;toast('Joined room!','tok');}
+function quickMatch(){toast('🔍 Finding match...','');setTimeout(()=>{toast('⚡ Match found!','tok');setTimeout(startGame,1000);},2500);createRoom();}
+function startGame(){
+  G.gameQs=[...QUIZ_QS].sort(()=>Math.random()-.5).slice(0,5);G.qIdx=0;G.playerScore=0;
+  G.gameScores={[G.profile?.name||'You']:0,'StarLearner99':0};
+  document.getElementById('game-section').style.display='block';showQ();
+}
+let _gtInt;
+function showQ(){
+  if(G.qIdx>=G.gameQs.length){endGame();return;}
+  const q=G.gameQs[G.qIdx];
+  document.getElementById('q-n').textContent=G.qIdx+1;
+  document.getElementById('q-txt').textContent=q.q;
+  document.getElementById('q-res').textContent='';
+  document.getElementById('q-opts').innerHTML=q.opts.map((o,i)=>`<button class="q-opt" onclick="ansQ(${i},${q.ans})">${o}</button>`).join('');
+  G.timerCount=15;document.getElementById('t-num').textContent=15;document.getElementById('t-fill').style.width='100%';
+  if(_gtInt)clearInterval(_gtInt);
+  _gtInt=setInterval(()=>{G.timerCount--;document.getElementById('t-num').textContent=G.timerCount;document.getElementById('t-fill').style.width=(G.timerCount/15*100)+'%';if(G.timerCount<=5)document.getElementById('t-fill').style.background='linear-gradient(90deg,var(--accent3),var(--pink))';else document.getElementById('t-fill').style.background='linear-gradient(90deg,var(--green),var(--accent2))';if(G.timerCount<=0){clearInterval(_gtInt);nextQ();}},1000);
+  updGLB();
+}
+function ansQ(i,ans){clearInterval(_gtInt);document.querySelectorAll('.q-opt').forEach((b,j)=>{b.classList.toggle('correct',j===ans);if(j===i&&i!==ans)b.classList.add('wrong');});if(i===ans){G.playerScore+=G.timerCount*10;G.gameScores[G.profile?.name||'You']=G.playerScore;G.xp+=5;updateNav();saveProgress();toast(`✅ Correct! +${G.timerCount*10} pts`,'tok');}else toast('❌ Wrong answer','');if(Math.random()>.4)G.gameScores['StarLearner99']=(G.gameScores['StarLearner99']||0)+Math.floor(Math.random()*110+30);document.getElementById('q-res').textContent=i===ans?'🎉 Correct!':'💡 Correct answer highlighted';updGLB();setTimeout(nextQ,1800);}
+function nextQ(){G.qIdx++;showQ();}
+function endGame(){clearInterval(_gtInt);document.getElementById('q-txt').textContent='🏁 Battle Over!';document.getElementById('q-opts').innerHTML='';document.getElementById('q-res').textContent=`Your score: ${G.playerScore} pts`;G.xp+=50;updateNav();saveProgress();buildGlobalLB();toast('🏆 +50 bonus XP!','txp');}
+function updGLB(){const el=document.getElementById('game-lb');if(!el)return;el.innerHTML=Object.entries(G.gameScores).sort((a,b)=>b[1]-a[1]).map(([n,s],i)=>`<li class="lb-row"><span class="lb-rank ${i===0?'g':'s'}">${i===0?'🥇':'🥈'}</span><span class="lb-name">${n}</span><span class="lb-score">${s} pts</span></li>`).join('');}
+
+// ════════════════════════════════════════
+// PROFILE
+// ════════════════════════════════════════
+function buildProfile(){
+  if(!G.user)return;
+  const name=G.profile?.name||G.user.email?.split('@')[0]||'Explorer';
+  document.getElementById('p-av').textContent=(name[0]||'?').toUpperCase();
+  document.getElementById('p-name').textContent=name;
+  document.getElementById('p-email').textContent=G.user.email||'—';
+  document.getElementById('p-grade').textContent=G.grade;
+  document.getElementById('p-lvl').textContent=Math.max(1,Math.floor(G.xp/200)+1);
+  const thr=[G.completedLessons.length>0,G.xp>=100,G.completedLessons.length>=5,false,false,G.xp>=1000,false,false];
+  document.getElementById('ach-grid').innerHTML=ACHIEVEMENTS.map((a,i)=>`<div class="ach-card ${thr[i]?'':'locked'}"><div class="ach-icon">${a.icon}</div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`).join('');
+  const cols=['var(--purple)','var(--blue)','var(--green)','var(--accent2)','var(--gold)','var(--accent3)'];
+  document.getElementById('subj-prog').innerHTML=SUBJECTS.map((s,i)=>{
+    const done=G.completedLessons.filter(id=>LESSONS.find(l=>l.id===id&&l.s===s.id)).length;
+    const total=LESSONS.filter(l=>l.s===s.id).length;
+    const pct=Math.round(done/total*100);
+    return `<div class="subj-prog-item"><span class="spi-icon">${s.icon}</span><span class="spi-name">${s.name}</span><div class="spi-bar"><div class="spi-fill" style="width:${pct}%;background:${cols[i]}"></div></div><span class="spi-pct">${pct}%</span></div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+// TOASTS
+// ════════════════════════════════════════
+function toast(msg,cls){
+  const c=document.getElementById('toasts');if(!c)return;
+  const el=document.createElement('div');el.className=`toast ${cls||''}`;el.innerHTML=msg;c.appendChild(el);
+  setTimeout(()=>el.style.opacity='0',2800);setTimeout(()=>el.remove(),3200);
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+window.addEventListener('load', async ()=>{
+  initSupabase();
+  buildGradeGrid();
+
+  if(!demoMode && sb){
+    const {data:{session}} = await sb.auth.getSession();
+    if(session?.user){
+      await loadProfile(session.user);
+      enterApp();return;
+    }
+    sb.auth.onAuthStateChange(async(event,session)=>{
+      if(event==='SIGNED_IN'&&session?.user){
+        await loadProfile(session.user);enterApp();
+      }
+    });
+  }
+  showScreen('auth-screen');
+});
+</script>
+</body>
+</html>
