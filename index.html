@@ -967,7 +967,7 @@ async function doRegister(){
 
 async function authGoogle(){
   if(demoMode){demoLogin('google.user@gmail.com','Nova Explorer');return;}
-  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
+  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname}});
 }
 
 function demoLogin(email,name){
